@@ -37,7 +37,7 @@ function escapeHtml(str) {
 function renderResults(options, totalVotes) {
   resultsEl.innerHTML = "";
   for (const opt of options) {
-    const pct = totalVotes > 0 ? ((opt.votes / totalVotes) * 100) : 0;
+    const pct = totalVotes > 0 ? (opt.votes / totalVotes) * 100 : 0;
     const pctDisplay = pct % 1 === 0 ? pct.toFixed(0) : pct.toFixed(1);
     const bar = document.createElement("div");
     bar.className = "result-bar";
@@ -143,8 +143,9 @@ document.getElementById("vote-form").addEventListener("submit", async (e) => {
   errorEl.classList.add("hidden");
   voteBtn.disabled = true;
 
-  const selected = Array.from(document.querySelectorAll('input[name="vote"]:checked'))
-    .map((el) => parseInt(el.value, 10));
+  const selected = Array.from(document.querySelectorAll('input[name="vote"]:checked')).map((el) =>
+    parseInt(el.value, 10),
+  );
 
   if (selected.length === 0) {
     errorEl.textContent = "Please select an option.";

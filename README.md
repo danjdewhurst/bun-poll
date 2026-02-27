@@ -117,6 +117,23 @@ Covers poll creation, voting, deduplication, expiry, multi-choice validation, an
 
 ---
 
+## Linting & Formatting
+
+The project uses [Biome](https://biomejs.dev) for linting and formatting.
+
+```bash
+# Check for lint and formatting issues
+bun run lint
+
+# Auto-format all files
+bun run format
+
+# Check and auto-fix everything
+bun run check
+```
+
+---
+
 ## Requirements
 
 - [Bun](https://bun.sh) v1.1.0+

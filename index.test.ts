@@ -1,4 +1,5 @@
-import { test, expect, beforeAll, afterAll, describe } from "bun:test";
+// biome-ignore-all lint/suspicious/noExplicitAny: test helpers use loose typing for API response assertions
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { db } from "./src/db.ts";
 
 const PORT = 0; // Let OS pick a free port
@@ -14,7 +15,17 @@ beforeAll(async () => {
   db.run("DELETE FROM polls");
 
   // Dynamically import and start the server
-  const { createPoll, getPoll, votePoll, getAdminPoll, exportPoll, summaryPoll, closePollHandler, deletePoll, resetVotes } = await import("./src/routes/polls.ts");
+  const {
+    createPoll,
+    getPoll,
+    votePoll,
+    getAdminPoll,
+    exportPoll,
+    summaryPoll,
+    closePollHandler,
+    deletePoll,
+    resetVotes,
+  } = await import("./src/routes/polls.ts");
   const { healthCheck } = await import("./src/routes/health.ts");
   const { websocketHandlers } = await import("./src/routes/websocket.ts");
   const { setServer } = await import("./src/server-ref.ts");
@@ -71,7 +82,7 @@ async function createTestPoll(overrides: Record<string, unknown> = {}) {
     body: JSON.stringify(body),
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { res, data: (await res.json() as any) as any };
+  return { res, data: (await res.json()) as any as any };
 }
 
 describe("POST /api/polls", () => {
@@ -107,7 +118,7 @@ describe("GET /api/polls/:shareId", () => {
   test("returns poll with options and results", async () => {
     const { data: created } = await createTestPoll();
     const res = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(res.status).toBe(200);
     expect(data.poll.question).toBe("Favourite colour?");
     expect(data.options).toHaveLength(3);
@@ -123,7 +134,7 @@ describe("GET /api/polls/:shareId", () => {
   test("has_voted reflects voter_token", async () => {
     const { data: created } = await createTestPoll();
     const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
-    const pollData = await pollRes.json() as any;
+    const pollData = (await pollRes.json()) as any;
     const optionId = pollData.options[0].id;
     const voterToken = crypto.randomUUID();
 
@@ -136,7 +147,7 @@ describe("GET /api/polls/:shareId", () => {
     const checkRes = await fetch(
       `${baseUrl}/api/polls/${created.share_id}?voter_token=${voterToken}`,
     );
-    const checkData = await checkRes.json() as any;
+    const checkData = (await checkRes.json()) as any;
     expect(checkData.has_voted).toBe(true);
   });
 });
@@ -145,7 +156,7 @@ describe("POST /api/polls/:shareId/vote", () => {
   test("records a vote and returns updated results", async () => {
     const { data: created } = await createTestPoll();
     const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
-    const pollData = await pollRes.json() as any;
+    const pollData = (await pollRes.json()) as any;
     const optionId = pollData.options[1].id;
     const voterToken = crypto.randomUUID();
 
@@ -154,7 +165,7 @@ describe("POST /api/polls/:shareId/vote", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ option_ids: [optionId], voter_token: voterToken }),
     });
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
 
     expect(res.status).toBe(200);
     expect(data.has_voted).toBe(true);
@@ -166,7 +177,7 @@ describe("POST /api/polls/:shareId/vote", () => {
   test("rejects duplicate vote from same voter_token", async () => {
     const { data: created } = await createTestPoll();
     const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
-    const pollData = await pollRes.json() as any;
+    const pollData = (await pollRes.json()) as any;
     const optionId = pollData.options[0].id;
     const voterToken = crypto.randomUUID();
 
@@ -187,7 +198,7 @@ describe("POST /api/polls/:shareId/vote", () => {
   test("rejects multiple options on single-choice poll", async () => {
     const { data: created } = await createTestPoll();
     const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
-    const pollData = await pollRes.json() as any;
+    const pollData = (await pollRes.json()) as any;
     const voterToken = crypto.randomUUID();
 
     const res = await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
@@ -204,7 +215,7 @@ describe("POST /api/polls/:shareId/vote", () => {
   test("allows multiple options on multi-choice poll", async () => {
     const { data: created } = await createTestPoll({ allow_multiple: true });
     const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
-    const pollData = await pollRes.json() as any;
+    const pollData = (await pollRes.json()) as any;
     const voterToken = crypto.randomUUID();
 
     const res = await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
@@ -221,7 +232,7 @@ describe("POST /api/polls/:shareId/vote", () => {
   test("rejects vote on expired poll", async () => {
     const { data: created } = await createTestPoll({ expires_in_minutes: -1 });
     const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
-    const pollData = await pollRes.json() as any;
+    const pollData = (await pollRes.json()) as any;
     const voterToken = crypto.randomUUID();
 
     const res = await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
@@ -249,7 +260,7 @@ describe("GET /api/polls/admin/:adminId", () => {
   test("returns full poll data including admin_id", async () => {
     const { data: created } = await createTestPoll();
     const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}`);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(res.status).toBe(200);
     expect(data.poll.admin_id).toBe(created.admin_id);
     expect(data.poll.share_id).toBe(created.share_id);
@@ -282,7 +293,7 @@ describe("GET /api/polls/admin/:adminId/export", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toContain("application/json");
     expect(res.headers.get("Content-Disposition")).toContain("attachment");
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(data.question).toBe("Favourite colour?");
     expect(data.options).toHaveLength(3);
     expect(data.total_votes).toBe(0);
@@ -296,7 +307,7 @@ describe("GET /api/polls/admin/:adminId/export", () => {
     const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/export`);
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toContain("application/json");
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(data.question).toBeDefined();
     expect(data.exported_at).toBeDefined();
   });
@@ -328,7 +339,7 @@ describe("GET /api/polls/admin/:adminId/summary", () => {
 describe("GET /health", () => {
   test("returns 200 with expected shape", async () => {
     const res = await fetch(`${baseUrl}/health`);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(res.status).toBe(200);
     expect(data.status).toBe("ok");
     expect(typeof data.uptime_seconds).toBe("number");
@@ -338,9 +349,9 @@ describe("GET /health", () => {
   });
 
   test("polls count reflects created polls", async () => {
-    const before = await fetch(`${baseUrl}/health`).then(r => r.json()) as any;
+    const before = (await fetch(`${baseUrl}/health`).then((r) => r.json())) as any;
     await createTestPoll();
-    const after = await fetch(`${baseUrl}/health`).then(r => r.json()) as any;
+    const after = (await fetch(`${baseUrl}/health`).then((r) => r.json())) as any;
     expect(after.polls).toBe(before.polls + 1);
   });
 });
@@ -351,7 +362,7 @@ describe("POST /api/polls/admin/:adminId/close", () => {
     const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/close`, {
       method: "POST",
     });
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(res.status).toBe(200);
     expect(data.poll.expires_at).toBeNumber();
     expect(data.poll.expires_at).toBeLessThanOrEqual(Date.now());
@@ -364,7 +375,7 @@ describe("POST /api/polls/admin/:adminId/close", () => {
       method: "POST",
     });
     expect(res.status).toBe(409);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(data.error).toBe("Poll is already closed");
   });
 
@@ -382,7 +393,7 @@ describe("DELETE /api/polls/admin/:adminId", () => {
     const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}`, {
       method: "DELETE",
     });
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(res.status).toBe(200);
     expect(data.deleted).toBe(true);
 
@@ -404,7 +415,7 @@ describe("POST /api/polls/admin/:adminId/reset", () => {
     const { data: created } = await createTestPoll();
     // Cast a vote first
     const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
-    const pollData = await pollRes.json() as any;
+    const pollData = (await pollRes.json()) as any;
     const optionId = pollData.options[0].id;
     await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
       method: "POST",
@@ -416,7 +427,7 @@ describe("POST /api/polls/admin/:adminId/reset", () => {
     const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/reset`, {
       method: "POST",
     });
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(res.status).toBe(200);
     expect(data.total_votes).toBe(0);
     for (const opt of data.options) {

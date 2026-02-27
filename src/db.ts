@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 
-const DB_PATH = process.env["DB_PATH"] ?? "bun-poll.sqlite";
+const DB_PATH = process.env.DB_PATH ?? "bun-poll.sqlite";
 
 const db = new Database(DB_PATH);
 
@@ -44,11 +44,11 @@ export const insertPoll = db.prepare<
   [string, string, string, number, number | null, number]
 >(
   `INSERT INTO polls (share_id, admin_id, question, allow_multiple, expires_at, created_at)
-   VALUES (?, ?, ?, ?, ?, ?) RETURNING id, share_id, admin_id`
+   VALUES (?, ?, ?, ?, ?, ?) RETURNING id, share_id, admin_id`,
 );
 
 export const insertOption = db.prepare<void, [number, string, number]>(
-  `INSERT INTO options (poll_id, text, position) VALUES (?, ?, ?)`
+  `INSERT INTO options (poll_id, text, position) VALUES (?, ?, ?)`,
 );
 
 export const getPollByShareId = db.prepare<
@@ -91,27 +91,27 @@ export const getResultsByPollId = db.prepare<
    LEFT JOIN (SELECT option_id, COUNT(*) AS cnt FROM votes GROUP BY option_id) v
      ON v.option_id = o.id
    WHERE o.poll_id = ?
-   ORDER BY o.position`
+   ORDER BY o.position`,
 );
 
 export const insertVote = db.prepare<void, [number, number, string, number]>(
-  `INSERT OR IGNORE INTO votes (poll_id, option_id, voter_token, created_at) VALUES (?, ?, ?, ?)`
+  `INSERT OR IGNORE INTO votes (poll_id, option_id, voter_token, created_at) VALUES (?, ?, ?, ?)`,
 );
 
 export const hasVoted = db.prepare<{ cnt: number }, [number, string]>(
-  `SELECT COUNT(*) AS cnt FROM votes WHERE poll_id = ? AND voter_token = ?`
+  `SELECT COUNT(*) AS cnt FROM votes WHERE poll_id = ? AND voter_token = ?`,
 );
 
 export const getTotalVotes = db.prepare<{ cnt: number }, [number]>(
-  `SELECT COUNT(DISTINCT voter_token) AS cnt FROM votes WHERE poll_id = ?`
+  `SELECT COUNT(DISTINCT voter_token) AS cnt FROM votes WHERE poll_id = ?`,
 );
 
 export const getOptionIdsByPollId = db.prepare<{ id: number }, [number]>(
-  `SELECT id FROM options WHERE poll_id = ?`
+  `SELECT id FROM options WHERE poll_id = ?`,
 );
 
 export const getPollCount = db.prepare<{ count: number }, []>(
-  `SELECT COUNT(*) AS count FROM polls`
+  `SELECT COUNT(*) AS count FROM polls`,
 );
 
 export const closePollStmt = db.prepare<
@@ -125,16 +125,10 @@ export const closePollStmt = db.prepare<
     created_at: number;
   },
   [number, string]
->(
-  `UPDATE polls SET expires_at = ? WHERE admin_id = ? RETURNING *`
-);
+>(`UPDATE polls SET expires_at = ? WHERE admin_id = ? RETURNING *`);
 
-export const deletePollStmt = db.prepare<void, [string]>(
-  `DELETE FROM polls WHERE admin_id = ?`
-);
+export const deletePollStmt = db.prepare<void, [string]>(`DELETE FROM polls WHERE admin_id = ?`);
 
-export const resetVotesStmt = db.prepare<void, [number]>(
-  `DELETE FROM votes WHERE poll_id = ?`
-);
+export const resetVotesStmt = db.prepare<void, [number]>(`DELETE FROM votes WHERE poll_id = ?`);
 
 export { db };

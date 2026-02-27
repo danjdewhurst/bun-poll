@@ -65,6 +65,25 @@ bun test --coverage
 
 ---
 
+## Linting & Formatting
+
+The project uses [Biome](https://biomejs.dev) for linting and formatting. Available scripts:
+
+```bash
+# Check for lint and formatting issues
+bun run lint
+
+# Auto-format all files
+bun run format
+
+# Check and auto-fix everything (lint + format)
+bun run check
+```
+
+Configuration lives in `biome.json` at the project root.
+
+---
+
 ## Usage
 
 1. Open `http://localhost:3000` in your browser

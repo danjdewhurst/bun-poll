@@ -11,7 +11,7 @@
     <div class="container">
       <div class="brand">
         <div class="brand-icon">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="3" height="10" rx="1.5" fill="#0c0b0a"/><rect x="6.5" y="5" width="3" height="8" rx="1.5" fill="#0c0b0a"/><rect x="11" y="1" width="3" height="12" rx="1.5" fill="#0c0b0a"/></svg>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="3" height="10" rx="1.5" fill="#0c0b0a"/><rect x="6.5" y="5" width="3" height="8" rx="1.5" fill="#0c0b0a"/><rect x="11" y="1" width="3" height="12" rx="1.5" fill="#0c0b0a"/></svg>
         </div>
         <span class="brand-name">bun-poll</span>
       </div>
@@ -39,16 +39,16 @@
         <div class="card" style="animation-delay: 0.3s">
           <div class="section-label">Export</div>
           <div class="export-actions">
-            <button class="btn btn-ghost" id="btn-csv">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 1h6l4 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3"/><path d="M10 1v4h4" stroke="currentColor" stroke-width="1.3"/></svg>
+            <button type="button" class="btn btn-ghost" id="btn-csv">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 1h6l4 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3"/><path d="M10 1v4h4" stroke="currentColor" stroke-width="1.3"/></svg>
               Download CSV
             </button>
-            <button class="btn btn-ghost" id="btn-json">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 1h6l4 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3"/><path d="M10 1v4h4" stroke="currentColor" stroke-width="1.3"/></svg>
+            <button type="button" class="btn btn-ghost" id="btn-json">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 1h6l4 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3"/><path d="M10 1v4h4" stroke="currentColor" stroke-width="1.3"/></svg>
               Download JSON
             </button>
-            <button class="btn btn-ghost" id="btn-summary">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M3 11V3.5A1.5 1.5 0 014.5 2H11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <button type="button" class="btn btn-ghost" id="btn-summary">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M3 11V3.5A1.5 1.5 0 014.5 2H11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
               Copy Summary
             </button>
           </div>
@@ -57,16 +57,16 @@
         <div class="card" style="animation-delay: 0.35s">
           <div class="section-label">Management</div>
           <div class="export-actions">
-            <button class="btn btn-ghost btn-danger" id="btn-close">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M5 8h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <button type="button" class="btn btn-ghost btn-danger" id="btn-close">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M5 8h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
               Close Voting
             </button>
-            <button class="btn btn-ghost" id="btn-reset">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 8a6 6 0 0110.5-4M14 8a6 6 0 01-10.5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M12.5 1v3h-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 15v-3h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <button type="button" class="btn btn-ghost" id="btn-reset">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 8a6 6 0 0110.5-4M14 8a6 6 0 01-10.5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M12.5 1v3h-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 15v-3h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Reset Votes
             </button>
-            <button class="btn btn-ghost btn-danger" id="btn-delete">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1M6 7v4M10 7v4M4 4l1 9a1 1 0 001 1h4a1 1 0 001-1l1-9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <button type="button" class="btn btn-ghost btn-danger" id="btn-delete">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1M6 7v4M10 7v4M4 4l1 9a1 1 0 001 1h4a1 1 0 001-1l1-9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Delete Poll
             </button>
           </div>
@@ -76,7 +76,7 @@
           <div class="section-label">Share</div>
           <div class="share-box" id="share-link" data-copy>
             <span class="link-text"></span>
-            <svg class="copy-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M3 11V3.5A1.5 1.5 0 014.5 2H11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg aria-hidden="true" class="copy-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M3 11V3.5A1.5 1.5 0 014.5 2H11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
           </div>
         </div>
 

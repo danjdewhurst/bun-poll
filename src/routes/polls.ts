@@ -1,15 +1,15 @@
 import {
-  insertPoll,
-  insertOption,
-  getPollByShareId,
-  getPollByAdminId,
-  getResultsByPollId,
-  insertVote,
-  hasVoted,
-  getTotalVotes,
-  getOptionIdsByPollId,
   closePollStmt,
   deletePollStmt,
+  getOptionIdsByPollId,
+  getPollByAdminId,
+  getPollByShareId,
+  getResultsByPollId,
+  getTotalVotes,
+  hasVoted,
+  insertOption,
+  insertPoll,
+  insertVote,
   resetVotesStmt,
 } from "../db.ts";
 import { getServer } from "../server-ref.ts";
@@ -24,9 +24,7 @@ function generateShareId(): string {
 function buildResults(pollId: number, voterToken?: string) {
   const options = getResultsByPollId.all(pollId);
   const total = getTotalVotes.get(pollId)?.cnt ?? 0;
-  const voted = voterToken
-    ? (hasVoted.get(pollId, voterToken)?.cnt ?? 0) > 0
-    : false;
+  const voted = voterToken ? (hasVoted.get(pollId, voterToken)?.cnt ?? 0) > 0 : false;
   return { options, total_votes: total, has_voted: voted };
 }
 
@@ -42,10 +40,7 @@ export function createPoll(req: Request): Promise<Response> {
       return Response.json({ error: "Question is required" }, { status: 400 });
     }
     if (!Array.isArray(body.options) || body.options.length < 2) {
-      return Response.json(
-        { error: "At least 2 options required" },
-        { status: 400 },
-      );
+      return Response.json({ error: "At least 2 options required" }, { status: 400 });
     }
 
     const shareId = generateShareId();
@@ -66,14 +61,11 @@ export function createPoll(req: Request): Promise<Response> {
     );
 
     if (!poll) {
-      return Response.json(
-        { error: "Failed to create poll" },
-        { status: 500 },
-      );
+      return Response.json({ error: "Failed to create poll" }, { status: 500 });
     }
 
     for (let i = 0; i < body.options.length; i++) {
-      insertOption.run(poll.id, body.options[i]!.trim(), i);
+      insertOption.run(poll.id, body.options[i]?.trim(), i);
     }
 
     return Response.json({
@@ -93,10 +85,7 @@ export function getPoll(req: Request): Response | Promise<Response> {
     return Response.json({ error: "Poll not found" }, { status: 404 });
   }
 
-  const { options, total_votes, has_voted } = buildResults(
-    poll.id,
-    voterToken,
-  );
+  const { options, total_votes, has_voted } = buildResults(poll.id, voterToken);
 
   return Response.json({
     poll: {
@@ -128,38 +117,25 @@ export function votePoll(req: Request): Response | Promise<Response> {
   }
 
   return (req.json() as Promise<VoteRequest>).then((body) => {
-    if (
-      !body.voter_token ||
-      !Array.isArray(body.option_ids) ||
-      body.option_ids.length === 0
-    ) {
+    if (!body.voter_token || !Array.isArray(body.option_ids) || body.option_ids.length === 0) {
       return Response.json({ error: "Invalid vote request" }, { status: 400 });
     }
 
     if (!poll.allow_multiple && body.option_ids.length !== 1) {
-      return Response.json(
-        { error: "Only one option allowed" },
-        { status: 400 },
-      );
+      return Response.json({ error: "Only one option allowed" }, { status: 400 });
     }
 
-    const alreadyVoted =
-      (hasVoted.get(poll.id, body.voter_token)?.cnt ?? 0) > 0;
+    const alreadyVoted = (hasVoted.get(poll.id, body.voter_token)?.cnt ?? 0) > 0;
     if (alreadyVoted) {
       return Response.json({ error: "Already voted" }, { status: 409 });
     }
 
-    const validOptionIds = new Set(
-      getOptionIdsByPollId.all(poll.id).map((o) => o.id),
-    );
+    const validOptionIds = new Set(getOptionIdsByPollId.all(poll.id).map((o) => o.id));
 
     const now = Date.now();
     for (const optionId of body.option_ids) {
       if (!validOptionIds.has(optionId)) {
-        return Response.json(
-          { error: `Invalid option ID: ${optionId}` },
-          { status: 400 },
-        );
+        return Response.json({ error: `Invalid option ID: ${optionId}` }, { status: 400 });
       }
       insertVote.run(poll.id, optionId, body.voter_token, now);
     }
@@ -213,7 +189,7 @@ export function exportPoll(req: Request): Response {
   if (format === "csv") {
     const header = "Option,Votes,Percentage";
     const rows = options.map((opt) => {
-      const pct = total_votes > 0 ? ((opt.votes / total_votes) * 100) : 0;
+      const pct = total_votes > 0 ? (opt.votes / total_votes) * 100 : 0;
       const pctDisplay = pct % 1 === 0 ? pct.toFixed(0) : pct.toFixed(1);
       return `${escapeCsvField(opt.text)},${opt.votes},${pctDisplay}%`;
     });
@@ -230,7 +206,7 @@ export function exportPoll(req: Request): Response {
   const exportData = {
     question: poll.question,
     options: options.map((opt) => {
-      const pct = total_votes > 0 ? ((opt.votes / total_votes) * 100) : 0;
+      const pct = total_votes > 0 ? (opt.votes / total_votes) * 100 : 0;
       const pctDisplay = pct % 1 === 0 ? pct.toFixed(0) : pct.toFixed(1);
       return {
         text: opt.text,
@@ -265,7 +241,7 @@ export function summaryPoll(req: Request): Response {
 
   const lines = [`Poll: ${poll.question}`, ""];
   for (const opt of options) {
-    const pct = total_votes > 0 ? ((opt.votes / total_votes) * 100) : 0;
+    const pct = total_votes > 0 ? (opt.votes / total_votes) * 100 : 0;
     const pctDisplay = pct % 1 === 0 ? pct.toFixed(0) : pct.toFixed(1);
     lines.push(`${opt.text}: ${opt.votes} votes (${pctDisplay}%)`);
   }

@@ -1,12 +1,22 @@
+import admin from "./frontend/admin.html";
 import home from "./frontend/home.html";
 import poll from "./frontend/poll.html";
-import admin from "./frontend/admin.html";
-import { createPoll, getPoll, votePoll, getAdminPoll, exportPoll, summaryPoll, closePollHandler, deletePoll, resetVotes } from "./src/routes/polls.ts";
 import { healthCheck } from "./src/routes/health.ts";
+import {
+  closePollHandler,
+  createPoll,
+  deletePoll,
+  exportPoll,
+  getAdminPoll,
+  getPoll,
+  resetVotes,
+  summaryPoll,
+  votePoll,
+} from "./src/routes/polls.ts";
 import { websocketHandlers } from "./src/routes/websocket.ts";
 import { setServer } from "./src/server-ref.ts";
 
-const PORT = parseInt(process.env["PORT"] ?? "3000", 10);
+const PORT = parseInt(process.env.PORT ?? "3000", 10);
 
 const server = Bun.serve({
   port: PORT,

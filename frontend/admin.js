@@ -11,7 +11,7 @@ const shareLinkEl = document.getElementById("share-link");
 const copyToast = document.getElementById("copy-toast");
 
 let shareId = null;
-let pollExpired = false;
+let _pollExpired = false;
 
 function escapeHtml(str) {
   const div = document.createElement("div");
@@ -22,7 +22,7 @@ function escapeHtml(str) {
 function renderResults(options, totalVotes) {
   resultsEl.innerHTML = "";
   for (const opt of options) {
-    const pct = totalVotes > 0 ? ((opt.votes / totalVotes) * 100) : 0;
+    const pct = totalVotes > 0 ? (opt.votes / totalVotes) * 100 : 0;
     const pctDisplay = pct % 1 === 0 ? pct.toFixed(0) : pct.toFixed(1);
     const bar = document.createElement("div");
     bar.className = "result-bar";
@@ -164,7 +164,7 @@ document.getElementById("btn-summary").addEventListener("click", async () => {
 });
 
 function markExpired() {
-  pollExpired = true;
+  _pollExpired = true;
   const closeBtn = document.getElementById("btn-close");
   closeBtn.disabled = true;
   // Add expired badge if not already present
