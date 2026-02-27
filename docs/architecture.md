@@ -104,9 +104,13 @@ WebSocket support is built into `Bun.serve()` — no external library needed.
 
 1. Client connects to `/ws/<shareId>`
 2. The `fetch` fallback matches the path and calls `server.upgrade()` with `{ data: { shareId } }`
-3. On `open`, the socket subscribes to the pub/sub topic `poll-<shareId>`
-4. On `close`, the socket unsubscribes
+3. On `open`, the socket subscribes to the pub/sub topic `poll-<shareId>`, the viewer count for that poll is incremented, and a `viewers` message is broadcast to all subscribers
+4. On `close`, the viewer count is decremented and the updated count is broadcast before the socket unsubscribes
 5. Client messages are ignored (server-push only)
+
+### Viewer Tracking
+
+An in-memory `Map<string, number>` tracks the number of connected WebSocket clients per poll (`shareId` to count). On each connect/disconnect, a `{ type: "viewers", count }` message is published to all subscribers. Entries are cleaned up when the count reaches zero.
 
 ### Broadcasting
 

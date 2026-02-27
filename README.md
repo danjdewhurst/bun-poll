@@ -36,6 +36,7 @@ Most poll tools are over-engineered SaaS products or require a dozen packages ju
 |---|---|---|
 | ⚡ | **Instant creation** | Create polls in seconds — no sign-up required |
 | 📡 | **Live results** | Votes broadcast to all viewers instantly via WebSockets |
+| 👁️ | **Live viewer count** | See how many people are watching a poll in real time |
 | 🔗 | **Shareable links** | Unique short URLs for voting, separate admin links for managing |
 | ☑️ | **Single & multiple choice** | Configurable per poll |
 | ⏱️ | **Poll expiry** | Optional time limit on voting |

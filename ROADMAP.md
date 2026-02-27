@@ -4,14 +4,6 @@ Ideas and planned improvements for bun-poll. Contributions welcome — pick anyt
 
 ---
 
-## Near Term
-
-### Live Viewer Count
-- Show "X people watching" on the poll and admin pages
-- Track connected WebSocket clients per poll
-
----
-
 ## Medium Term
 
 ### Richer Poll Types
@@ -72,6 +64,11 @@ Ideas and planned improvements for bun-poll. Contributions welcome — pick anyt
 ---
 
 ## Done
+
+### Live Viewer Count
+- "X watching" indicator on both poll and admin pages
+- In-memory tracking of connected WebSocket clients per poll
+- Count broadcasts on every connect/disconnect
 
 ### Input Guardrails
 - Max length limits on questions (500 chars) and options (200 chars, max 20 options)

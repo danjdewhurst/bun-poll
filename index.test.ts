@@ -526,3 +526,110 @@ describe("HTML pages", () => {
     expect(res.status).toBe(200);
   });
 });
+
+describe("WebSocket viewer count", () => {
+  test("broadcasts viewer count on connect", async () => {
+    const { data: created } = await createTestPoll();
+    const wsUrl = baseUrl.replace("http", "ws");
+    const ws = new WebSocket(`${wsUrl}/ws/${created.share_id}`);
+
+    const message = await new Promise<{ type: string; count: number }>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        ws.close();
+        reject(new Error("Timed out waiting for viewers message"));
+      }, 5000);
+      ws.addEventListener("message", (event) => {
+        const data = JSON.parse(event.data as string);
+        if (data.type === "viewers") {
+          clearTimeout(timeout);
+          resolve(data);
+        }
+      });
+    });
+
+    expect(message.type).toBe("viewers");
+    expect(message.count).toBeGreaterThanOrEqual(1);
+    ws.close();
+  });
+
+  test("viewer count increments with multiple connections", async () => {
+    const { data: created } = await createTestPoll();
+    const wsUrl = baseUrl.replace("http", "ws");
+
+    // Connect first client and wait for its viewer message
+    const ws1 = new WebSocket(`${wsUrl}/ws/${created.share_id}`);
+    await new Promise<void>((resolve) => {
+      ws1.addEventListener("message", (event) => {
+        const data = JSON.parse(event.data as string);
+        if (data.type === "viewers") resolve();
+      });
+    });
+
+    // Connect second client and capture its viewer count
+    const ws2 = new WebSocket(`${wsUrl}/ws/${created.share_id}`);
+    const message = await new Promise<{ type: string; count: number }>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        ws2.close();
+        reject(new Error("Timed out waiting for viewers message"));
+      }, 5000);
+      ws2.addEventListener("message", (event) => {
+        const data = JSON.parse(event.data as string);
+        if (data.type === "viewers") {
+          clearTimeout(timeout);
+          resolve(data);
+        }
+      });
+    });
+
+    expect(message.count).toBe(2);
+
+    ws1.close();
+    ws2.close();
+  });
+
+  test("viewer count decrements on disconnect", async () => {
+    const { data: created } = await createTestPoll();
+    const wsUrl = baseUrl.replace("http", "ws");
+
+    // Connect two clients
+    const ws1 = new WebSocket(`${wsUrl}/ws/${created.share_id}`);
+    await new Promise<void>((resolve) => {
+      ws1.addEventListener("open", () => resolve());
+    });
+    // Wait for ws1 to be fully subscribed
+    await new Promise<void>((resolve) => {
+      ws1.addEventListener("message", (event) => {
+        const data = JSON.parse(event.data as string);
+        if (data.type === "viewers") resolve();
+      });
+    });
+
+    const ws2 = new WebSocket(`${wsUrl}/ws/${created.share_id}`);
+    await new Promise<void>((resolve) => {
+      ws2.addEventListener("message", (event) => {
+        const data = JSON.parse(event.data as string);
+        if (data.type === "viewers") resolve();
+      });
+    });
+
+    // Close ws2 and listen on ws1 for the updated viewer count
+    const decremented = new Promise<{ type: string; count: number }>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("Timed out waiting for decremented viewers message"));
+      }, 5000);
+      ws1.addEventListener("message", (event) => {
+        const data = JSON.parse(event.data as string);
+        if (data.type === "viewers" && data.count < 2) {
+          clearTimeout(timeout);
+          resolve(data);
+        }
+      });
+    });
+
+    ws2.close();
+    const result = await decremented;
+    expect(result.count).toBe(1);
+
+    ws1.close();
+  });
+});

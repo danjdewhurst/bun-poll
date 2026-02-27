@@ -376,3 +376,16 @@ Connect to receive real-time vote broadcasts for a specific poll. The server pus
 ```
 
 A message is broadcast every time a vote is recorded on the poll.
+
+### Viewer Count
+
+When a client connects or disconnects, all subscribers on the same poll topic receive a viewer count update:
+
+```json
+{
+  "type": "viewers",
+  "count": 5
+}
+```
+
+The `count` reflects the total number of WebSocket connections currently subscribed to the poll. This is sent immediately on connection and again whenever a client joins or leaves.

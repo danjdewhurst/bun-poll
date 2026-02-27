@@ -131,6 +131,23 @@ h2 {
   margin-bottom: 0.75rem;
 }
 
+/* ── Viewer bar ── */
+
+.viewer-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 1.25rem;
+  opacity: 0;
+  animation: fadeUp 0.4s ease 0.15s forwards;
+}
+
+.viewer-bar svg {
+  color: var(--text-muted);
+}
+
 /* ── Card ── */
 
 .card {

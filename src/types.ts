@@ -46,8 +46,7 @@ export interface VoteRequest {
   voter_token: string;
 }
 
-export interface WsMessage {
-  type: "results" | "closed";
-  options: OptionResult[];
-  total_votes: number;
-}
+export type WsMessage =
+  | { type: "results"; options: OptionResult[]; total_votes: number }
+  | { type: "closed"; options: OptionResult[]; total_votes: number }
+  | { type: "viewers"; count: number };

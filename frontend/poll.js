@@ -75,6 +75,9 @@ function connectWs() {
     if (data.type === "results") {
       showResults(data.options, data.total_votes);
     }
+    if (data.type === "viewers") {
+      document.getElementById("viewer-count").textContent = data.count;
+    }
   });
 
   ws.addEventListener("close", () => {
