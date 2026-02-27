@@ -158,6 +158,13 @@ That's it. No other runtime dependencies. The database is SQLite via `bun:sqlite
 
 ---
 
+## Documentation
+
+- **[Getting Started](docs/getting-started.md)** — installation, running, and configuration
+- **[API Reference](docs/api.md)** — endpoints, WebSocket, request/response examples
+- **[Architecture](docs/architecture.md)** — project structure, database schema, design decisions
+- **[Testing](docs/testing.md)** — running tests, coverage, test suite reference
+
 ## Roadmap
 
 See **[ROADMAP.md](ROADMAP.md)** for planned features and ideas — contributions welcome!
