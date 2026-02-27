@@ -1,0 +1,164 @@
+# Architecture
+
+bun-poll is a server-rendered polling application with zero runtime dependencies. Everything is built on [Bun](https://bun.sh) native APIs.
+
+---
+
+## Stack
+
+| Layer | Technology |
+|---|---|
+| Runtime | Bun |
+| HTTP server | `Bun.serve()` |
+| WebSockets | `Bun.serve()` built-in WebSocket support |
+| Database | SQLite via `bun:sqlite` |
+| Frontend | Plain HTML/CSS/JS via Bun's HTML imports |
+| Bundling | Bun's built-in bundler (HTML imports) |
+
+No Express, no Vite, no ORM, no npm runtime packages.
+
+---
+
+## Project Structure
+
+```
+index.ts                      Entry point — Bun.serve() with routes and WebSockets
+index.test.ts                 Integration tests (bun:test)
+src/
+  db.ts                       SQLite schema, pragmas, prepared statements
+  types.ts                    Shared TypeScript interfaces
+  server-ref.ts               Module-level server reference for WS broadcasting
+  routes/
+    polls.ts                  API route handlers (create, get, vote, admin)
+    health.ts                 GET /health handler
+    websocket.ts              WebSocket open/close/message handlers
+frontend/
+  home.html / home.js         Poll creation page
+  poll.html / poll.js         Voting and live results page
+  admin.html / admin.js       Admin results and share link page
+  styles.css                  Shared stylesheet
+```
+
+---
+
+## Request Flow
+
+1. `Bun.serve()` in `index.ts` matches incoming requests against named routes
+2. HTML routes (`/`, `/poll/:shareId`, `/admin/:adminId`) serve bundled HTML files directly via Bun's HTML imports
+3. API routes (`/api/polls/*`) delegate to handler functions in `src/routes/polls.ts`
+4. The `fetch` fallback handles WebSocket upgrades on `/ws/:shareId` and returns 404 for everything else
+5. After a successful vote, the handler calls `server.publish()` to broadcast updated results to all WebSocket subscribers on that poll's topic
+
+---
+
+## Database
+
+SQLite with WAL (write-ahead logging) mode for concurrent read performance. Foreign keys are enforced.
+
+### Schema
+
+**polls**
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER | Primary key, autoincrement |
+| `share_id` | TEXT | 8-char hex, unique — used in public URLs |
+| `admin_id` | TEXT | UUID v4, unique — used in admin URLs |
+| `question` | TEXT | The poll question |
+| `allow_multiple` | INTEGER | 0 = single choice, 1 = multiple choice |
+| `expires_at` | INTEGER | Unix ms timestamp, nullable |
+| `created_at` | INTEGER | Unix ms timestamp |
+
+**options**
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER | Primary key, autoincrement |
+| `poll_id` | INTEGER | Foreign key to polls, cascade delete |
+| `text` | TEXT | Option label |
+| `position` | INTEGER | Display order (0-based) |
+
+**votes**
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER | Primary key, autoincrement |
+| `poll_id` | INTEGER | Foreign key to polls, cascade delete |
+| `option_id` | INTEGER | Foreign key to options, cascade delete |
+| `voter_token` | TEXT | Client-generated UUID |
+| `created_at` | INTEGER | Unix ms timestamp |
+
+A `UNIQUE(poll_id, option_id, voter_token)` constraint prevents the same voter from casting duplicate votes on the same option. `INSERT OR IGNORE` provides a database-level backstop.
+
+### Prepared Statements
+
+All queries are compiled once at module load time using `db.prepare()`. This avoids re-parsing SQL on every request. See `src/db.ts` for the full list.
+
+---
+
+## WebSocket Architecture
+
+WebSocket support is built into `Bun.serve()` — no external library needed.
+
+### Connection Lifecycle
+
+1. Client connects to `/ws/<shareId>`
+2. The `fetch` fallback matches the path and calls `server.upgrade()` with `{ data: { shareId } }`
+3. On `open`, the socket subscribes to the pub/sub topic `poll-<shareId>`
+4. On `close`, the socket unsubscribes
+5. Client messages are ignored (server-push only)
+
+### Broadcasting
+
+When a vote is recorded in `src/routes/polls.ts`, the handler calls:
+
+```ts
+server.publish(`poll-${shareId}`, JSON.stringify(message));
+```
+
+This delivers updated results to every connected client on that poll, with no polling or manual fan-out.
+
+### Server Reference
+
+The server instance is created in `index.ts` but needed in `src/routes/polls.ts` for broadcasting. `src/server-ref.ts` acts as a simple module-level singleton to bridge this:
+
+- `setServer(s)` — called once after `Bun.serve()`
+- `getServer()` — called by route handlers when they need to publish
+
+---
+
+## Frontend
+
+Each page is a standalone HTML file that imports its own JS. Bun's HTML imports handle bundling automatically — no build step or config needed.
+
+### Pages
+
+| Route | HTML | JS | Purpose |
+|---|---|---|---|
+| `/` | `home.html` | `home.js` | Create a poll |
+| `/poll/:shareId` | `poll.html` | `poll.js` | Vote and view live results |
+| `/admin/:adminId` | `admin.html` | `admin.js` | Admin dashboard with share link |
+
+### Shared Styles
+
+`frontend/styles.css` defines a dark theme with CSS custom properties. Key design tokens:
+
+- Backgrounds: `--bg`, `--surface`, `--surface-raised`
+- Text: `--text`, `--text-secondary`, `--text-muted`
+- Accent gradient: `--accent-start` (orange) to `--accent-end` (yellow)
+- Fonts: `DM Sans` (body), `Instrument Serif` (headings)
+
+### Voter Token
+
+Each browser generates a UUID per poll (`voter_token_<shareId>` in localStorage). This token is sent with votes and used to check `has_voted` status. It's a client-side deduplication mechanism backed by the database-level unique constraint.
+
+---
+
+## Configuration
+
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | `3000` | HTTP server port |
+| `DB_PATH` | `bun-poll.sqlite` | SQLite database file path |
+
+Bun loads `.env` files automatically — no dotenv needed.
