@@ -1,7 +1,7 @@
 import home from "./frontend/home.html";
 import poll from "./frontend/poll.html";
 import admin from "./frontend/admin.html";
-import { createPoll, getPoll, votePoll, getAdminPoll } from "./src/routes/polls.ts";
+import { createPoll, getPoll, votePoll, getAdminPoll, exportPoll, summaryPoll } from "./src/routes/polls.ts";
 import { healthCheck } from "./src/routes/health.ts";
 import { websocketHandlers } from "./src/routes/websocket.ts";
 import { setServer } from "./src/server-ref.ts";
@@ -26,6 +26,12 @@ const server = Bun.serve({
     },
     "/api/polls/admin/:adminId": {
       GET: getAdminPoll,
+    },
+    "/api/polls/admin/:adminId/export": {
+      GET: exportPoll,
+    },
+    "/api/polls/admin/:adminId/summary": {
+      GET: summaryPoll,
     },
   },
   fetch(req, server) {

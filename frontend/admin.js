@@ -138,4 +138,24 @@ document.addEventListener("click", (e) => {
   }
 });
 
+document.getElementById("btn-csv").addEventListener("click", () => {
+  window.location.href = `/api/polls/admin/${adminId}/export?format=csv`;
+});
+
+document.getElementById("btn-json").addEventListener("click", () => {
+  window.location.href = `/api/polls/admin/${adminId}/export?format=json`;
+});
+
+document.getElementById("btn-summary").addEventListener("click", async () => {
+  try {
+    const res = await fetch(`/api/polls/admin/${adminId}/summary`);
+    if (!res.ok) throw new Error("Failed to fetch summary");
+    const text = await res.text();
+    await navigator.clipboard.writeText(text);
+    showToast("Summary copied to clipboard");
+  } catch {
+    showToast("Failed to copy summary");
+  }
+});
+
 loadAdmin();

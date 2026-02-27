@@ -304,6 +304,14 @@ input[type="number"]:focus {
   color: var(--danger);
 }
 
+/* ── Export actions ── */
+
+.export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 /* ── Toggle / Checkbox ── */
 
 .toggle-row {

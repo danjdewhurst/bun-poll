@@ -163,6 +163,82 @@ Returns the full poll data including the `admin_id`. No `has_voted` field is inc
 
 ---
 
+### Export Results
+
+`GET /api/polls/admin/:adminId/export`
+
+Downloads poll results in CSV or JSON format.
+
+**Query parameters:**
+
+| Param | Type | Description |
+|---|---|---|
+| `format` | string | `csv` or `json` (default: `json`) |
+
+**CSV response (`200`):**
+
+```
+Option,Votes,Percentage
+TypeScript,3,60%
+Rust,1,20%
+Go,1,20%
+```
+
+Headers: `Content-Type: text/csv`, `Content-Disposition: attachment; filename="poll-<shareId>.csv"`
+
+**JSON response (`200`):**
+
+```json
+{
+  "question": "Favourite language?",
+  "options": [
+    { "text": "TypeScript", "votes": 3, "percentage": "60%" },
+    { "text": "Rust", "votes": 1, "percentage": "20%" },
+    { "text": "Go", "votes": 1, "percentage": "20%" }
+  ],
+  "total_votes": 5,
+  "exported_at": "2026-02-27T12:00:00.000Z"
+}
+```
+
+Headers: `Content-Type: application/json`, `Content-Disposition: attachment; filename="poll-<shareId>.json"`
+
+**Errors:**
+
+| Status | Reason |
+|---|---|
+| `404` | Poll not found |
+
+---
+
+### Results Summary
+
+`GET /api/polls/admin/:adminId/summary`
+
+Returns a plain-text summary suitable for pasting into chat or email.
+
+**Response (`200`):**
+
+```
+Poll: Favourite language?
+
+TypeScript: 3 votes (60%)
+Rust: 1 votes (20%)
+Go: 1 votes (20%)
+
+Total: 5 votes
+```
+
+Headers: `Content-Type: text/plain`
+
+**Errors:**
+
+| Status | Reason |
+|---|---|
+| `404` | Poll not found |
+
+---
+
 ## Health
 
 ### Health Check

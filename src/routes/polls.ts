@@ -185,3 +185,93 @@ export function getAdminPoll(req: Request): Response {
     total_votes,
   });
 }
+
+function escapeCsvField(value: string): string {
+  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+export function exportPoll(req: Request): Response {
+  const url = new URL(req.url);
+  const parts = url.pathname.split("/");
+  // /api/polls/admin/:adminId/export → adminId is at index parts.length - 2
+  const adminId = parts[parts.length - 2]!;
+  const format = url.searchParams.get("format") ?? "json";
+
+  const poll = getPollByAdminId.get(adminId);
+  if (!poll) {
+    return Response.json({ error: "Poll not found" }, { status: 404 });
+  }
+
+  const { options, total_votes } = buildResults(poll.id);
+
+  if (format === "csv") {
+    const header = "Option,Votes,Percentage";
+    const rows = options.map((opt) => {
+      const pct = total_votes > 0 ? ((opt.votes / total_votes) * 100) : 0;
+      const pctDisplay = pct % 1 === 0 ? pct.toFixed(0) : pct.toFixed(1);
+      return `${escapeCsvField(opt.text)},${opt.votes},${pctDisplay}%`;
+    });
+    const csv = [header, ...rows].join("\n");
+
+    return new Response(csv, {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="poll-${poll.share_id}.csv"`,
+      },
+    });
+  }
+
+  const exportData = {
+    question: poll.question,
+    options: options.map((opt) => {
+      const pct = total_votes > 0 ? ((opt.votes / total_votes) * 100) : 0;
+      const pctDisplay = pct % 1 === 0 ? pct.toFixed(0) : pct.toFixed(1);
+      return {
+        text: opt.text,
+        votes: opt.votes,
+        percentage: `${pctDisplay}%`,
+      };
+    }),
+    total_votes,
+    exported_at: new Date().toISOString(),
+  };
+
+  return new Response(JSON.stringify(exportData, null, 2), {
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Content-Disposition": `attachment; filename="poll-${poll.share_id}.json"`,
+    },
+  });
+}
+
+export function summaryPoll(req: Request): Response {
+  const url = new URL(req.url);
+  const parts = url.pathname.split("/");
+  // /api/polls/admin/:adminId/summary → adminId is at index parts.length - 2
+  const adminId = parts[parts.length - 2]!;
+
+  const poll = getPollByAdminId.get(adminId);
+  if (!poll) {
+    return Response.json({ error: "Poll not found" }, { status: 404 });
+  }
+
+  const { options, total_votes } = buildResults(poll.id);
+
+  const lines = [`Poll: ${poll.question}`, ""];
+  for (const opt of options) {
+    const pct = total_votes > 0 ? ((opt.votes / total_votes) * 100) : 0;
+    const pctDisplay = pct % 1 === 0 ? pct.toFixed(0) : pct.toFixed(1);
+    lines.push(`${opt.text}: ${opt.votes} votes (${pctDisplay}%)`);
+  }
+  lines.push("");
+  lines.push(`Total: ${total_votes} votes`);
+
+  return new Response(lines.join("\n"), {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+    },
+  });
+}

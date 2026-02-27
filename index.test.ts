@@ -14,7 +14,7 @@ beforeAll(async () => {
   db.run("DELETE FROM polls");
 
   // Dynamically import and start the server
-  const { createPoll, getPoll, votePoll, getAdminPoll } = await import("./src/routes/polls.ts");
+  const { createPoll, getPoll, votePoll, getAdminPoll, exportPoll, summaryPoll } = await import("./src/routes/polls.ts");
   const { healthCheck } = await import("./src/routes/health.ts");
   const { websocketHandlers } = await import("./src/routes/websocket.ts");
   const { setServer } = await import("./src/server-ref.ts");
@@ -33,6 +33,8 @@ beforeAll(async () => {
       "/api/polls/:shareId": { GET: getPoll },
       "/api/polls/:shareId/vote": { POST: votePoll },
       "/api/polls/admin/:adminId": { GET: getAdminPoll },
+      "/api/polls/admin/:adminId/export": { GET: exportPoll },
+      "/api/polls/admin/:adminId/summary": { GET: summaryPoll },
     },
     fetch(req, server) {
       const url = new URL(req.url);
@@ -254,6 +256,69 @@ describe("GET /api/polls/admin/:adminId", () => {
 
   test("returns 404 for unknown admin_id", async () => {
     const res = await fetch(`${baseUrl}/api/polls/admin/nonexist`);
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("GET /api/polls/admin/:adminId/export", () => {
+  test("returns CSV with correct Content-Type", async () => {
+    const { data: created } = await createTestPoll();
+    const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/export?format=csv`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("text/csv");
+    expect(res.headers.get("Content-Disposition")).toContain("attachment");
+    const text = await res.text();
+    expect(text).toContain("Option,Votes,Percentage");
+    expect(text).toContain("Red,");
+    expect(text).toContain("Blue,");
+    expect(text).toContain("Green,");
+  });
+
+  test("returns structured JSON export", async () => {
+    const { data: created } = await createTestPoll();
+    const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/export?format=json`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("application/json");
+    expect(res.headers.get("Content-Disposition")).toContain("attachment");
+    const data = await res.json() as any;
+    expect(data.question).toBe("Favourite colour?");
+    expect(data.options).toHaveLength(3);
+    expect(data.total_votes).toBe(0);
+    expect(data.exported_at).toBeString();
+    expect(data.options[0].text).toBe("Red");
+    expect(data.options[0].percentage).toBe("0%");
+  });
+
+  test("defaults to JSON when format not specified", async () => {
+    const { data: created } = await createTestPoll();
+    const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/export`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("application/json");
+    const data = await res.json() as any;
+    expect(data.question).toBeDefined();
+    expect(data.exported_at).toBeDefined();
+  });
+
+  test("returns 404 for invalid admin ID", async () => {
+    const res = await fetch(`${baseUrl}/api/polls/admin/nonexist/export`);
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("GET /api/polls/admin/:adminId/summary", () => {
+  test("returns plain text summary", async () => {
+    const { data: created } = await createTestPoll();
+    const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/summary`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("text/plain");
+    const text = await res.text();
+    expect(text).toContain("Poll: Favourite colour?");
+    expect(text).toContain("Red: 0 votes (0%)");
+    expect(text).toContain("Total: 0 votes");
+  });
+
+  test("returns 404 for invalid admin ID", async () => {
+    const res = await fetch(`${baseUrl}/api/polls/admin/nonexist/summary`);
     expect(res.status).toBe(404);
   });
 });

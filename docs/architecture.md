@@ -29,7 +29,7 @@ src/
   types.ts                    Shared TypeScript interfaces
   server-ref.ts               Module-level server reference for WS broadcasting
   routes/
-    polls.ts                  API route handlers (create, get, vote, admin)
+    polls.ts                  API route handlers (create, get, vote, admin, export, summary)
     health.ts                 GET /health handler
     websocket.ts              WebSocket open/close/message handlers
 frontend/
@@ -45,7 +45,7 @@ frontend/
 
 1. `Bun.serve()` in `index.ts` matches incoming requests against named routes
 2. HTML routes (`/`, `/poll/:shareId`, `/admin/:adminId`) serve bundled HTML files directly via Bun's HTML imports
-3. API routes (`/api/polls/*`) delegate to handler functions in `src/routes/polls.ts`
+3. API routes (`/api/polls/*`) delegate to handler functions in `src/routes/polls.ts` (including export and summary endpoints under `/api/polls/admin/:adminId/`)
 4. The `fetch` fallback handles WebSocket upgrades on `/ws/:shareId` and returns 404 for everything else
 5. After a successful vote, the handler calls `server.publish()` to broadcast updated results to all WebSocket subscribers on that poll's topic
 

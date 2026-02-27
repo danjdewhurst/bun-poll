@@ -62,6 +62,22 @@ Before each run, the `beforeAll` hook clears all tables (`votes`, `options`, `po
 | Returns full poll data | 200, includes `admin_id` and `share_id` |
 | Unknown admin_id | Returns 404 |
 
+### `GET /api/polls/admin/:adminId/export` — Results Export
+
+| Test | Assertion |
+|---|---|
+| CSV export | 200, correct `Content-Type: text/csv`, header row + option rows present |
+| JSON export | 200, structured data with `question`, `options`, `total_votes`, `exported_at` |
+| Default format is JSON | 200, `Content-Type: application/json` when no `format` param |
+| Unknown admin_id | Returns 404 |
+
+### `GET /api/polls/admin/:adminId/summary` — Results Summary
+
+| Test | Assertion |
+|---|---|
+| Returns plain text summary | 200, `Content-Type: text/plain`, contains question, options with votes, and total |
+| Unknown admin_id | Returns 404 |
+
 ### `GET /health` — Health Check
 
 | Test | Assertion |

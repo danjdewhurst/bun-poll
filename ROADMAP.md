@@ -6,10 +6,6 @@ Ideas and planned improvements for bun-poll. Contributions welcome — pick anyt
 
 ## Near Term
 
-### Results Export
-- Download results as CSV or JSON from the admin page
-- One-click copy of a results summary for pasting into chat/email
-
 ### Poll Management
 - Admin can close voting early
 - Admin can delete a poll entirely
@@ -90,6 +86,11 @@ Ideas and planned improvements for bun-poll. Contributions welcome — pick anyt
 ---
 
 ## Done
+
+### Results Export
+- Download results as CSV or JSON from the admin page
+- One-click copy of a plain-text results summary for pasting into chat/email
+- Export and summary endpoints under `/api/polls/admin/:adminId/`
 
 ### Health Check
 - `GET /health` endpoint returning uptime, poll count, and database status
