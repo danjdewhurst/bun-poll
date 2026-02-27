@@ -988,6 +988,12 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.75rem;
+  position: relative;
+  z-index: 10;
+}
+
+.card:has(.share-actions) {
+  overflow: visible;
 }
 
 .share-btn {
