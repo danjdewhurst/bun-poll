@@ -137,6 +137,10 @@ async function loadAdmin() {
     const origin = window.location.origin;
     shareLinkEl.querySelector(".link-text").textContent = `${origin}/poll/${shareId}`;
 
+    const embedSnippetEl = document.getElementById("embed-snippet");
+    embedSnippetEl.querySelector(".link-text").textContent =
+      `<iframe src="${origin}/embed/${shareId}" width="400" height="300" frameborder="0"></iframe>`;
+
     document.getElementById("created-at").textContent = formatDate(data.poll.created_at);
     document.getElementById("starts-at").textContent = data.poll.starts_at
       ? formatDate(data.poll.starts_at)

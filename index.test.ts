@@ -31,6 +31,7 @@ beforeAll(async () => {
   const { setServer } = await import("./src/server-ref.ts");
   const home = (await import("./frontend/home.html")).default;
   const poll = (await import("./frontend/poll.html")).default;
+  const embed = (await import("./frontend/embed.html")).default;
   const admin = (await import("./frontend/admin.html")).default;
 
   server = Bun.serve({
@@ -38,6 +39,7 @@ beforeAll(async () => {
     routes: {
       "/": home,
       "/poll/:shareId": poll,
+      "/embed/:shareId": embed,
       "/admin/:adminId": admin,
       "/health": { GET: healthCheck },
       "/api/features": { GET: getFeatureFlags },
@@ -642,6 +644,14 @@ describe("HTML pages", () => {
     const { data: created } = await createTestPoll();
     const res = await fetch(`${baseUrl}/admin/${created.admin_id}`);
     expect(res.status).toBe(200);
+  });
+
+  test("embed page loads", async () => {
+    const { data: created } = await createTestPoll();
+    const res = await fetch(`${baseUrl}/embed/${created.share_id}`);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("embed-view");
   });
 });
 
