@@ -98,10 +98,11 @@ export function renderResults(
         <span class="option-stats">${opt.votes} vote${opt.votes !== 1 ? "s" : ""}</span>
       </div>
       <div class="bar">
-        <div class="fill" style="width: ${pct}%"></div>
+        <div class="fill"></div>
         <span class="pct-overlay">${pctDisplay}%</span>
       </div>
     `;
+    bar.querySelector(".fill").style.width = `${pct}%`;
     resultsEl.appendChild(bar);
   }
   totalVotesEl.textContent = `${totalVotes} total vote${totalVotes !== 1 ? "s" : ""}`;
