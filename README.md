@@ -57,7 +57,8 @@ Most poll tools are over-engineered SaaS products or require a dozen packages ju
 
 Try it out at **[bun-poll.onrender.com](https://bun-poll.onrender.com/)**
 
-> **Note:** This is a demo instance — not intended for production use. Data is not properly persisted and may be reset at any time.
+> [!CAUTION]
+> This is a demo instance — not intended for production use. Data is not properly persisted and may be reset at any time.
 
 ---
 
