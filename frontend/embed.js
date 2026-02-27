@@ -1,4 +1,4 @@
-import { escapeHtml, getVoterToken, startCountdown, connectWs, renderResults } from "./shared.js";
+import { connectWs, escapeHtml, getVoterToken, renderResults, startCountdown } from "./shared.js";
 
 const shareId = window.location.pathname.split("/").pop();
 let features = { websocket: true };

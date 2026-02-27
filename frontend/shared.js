@@ -79,7 +79,13 @@ export function connectWs({ shareId, onMessage, statusDot, statusText }) {
   connect();
 }
 
-export function renderResults(resultsEl, totalVotesEl, options, totalVotes, barClass = "result-bar") {
+export function renderResults(
+  resultsEl,
+  totalVotesEl,
+  options,
+  totalVotes,
+  barClass = "result-bar",
+) {
   resultsEl.innerHTML = "";
   for (const opt of options) {
     const pct = totalVotes > 0 ? (opt.votes / totalVotes) * 100 : 0;
@@ -141,4 +147,125 @@ export function setupCopyHandlers(toastEl) {
   });
 
   return showToast;
+}
+
+const SHARE_ICONS = {
+  copy: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M3 11V3.5A1.5 1.5 0 014.5 2H11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+  email:
+    '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M1 4.5L8 9l7-4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  qr: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="10" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="10" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="10.5" y="10.5" width="4" height="4" rx="0.5" fill="currentColor"/></svg>',
+  share:
+    '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 8v5a1 1 0 001 1h6a1 1 0 001-1V8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 2v7M5 5l3-3 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+
+export function renderShareButtons(container, url, title, showToast) {
+  container.innerHTML = "";
+
+  // Copy Link
+  const copyBtn = makeShareBtn(SHARE_ICONS.copy, "Copy Link");
+  copyBtn.addEventListener("click", () => {
+    navigator.clipboard
+      .writeText(url)
+      .then(() => showToast("Link copied to clipboard"))
+      .catch(() => showToast("Failed to copy link"));
+  });
+  container.appendChild(copyBtn);
+
+  // Email
+  const emailBtn = makeShareBtn(SHARE_ICONS.email, "Email");
+  emailBtn.addEventListener("click", () => {
+    const subject = encodeURIComponent(title || "Check out this poll");
+    const body = encodeURIComponent(url);
+    window.open(`mailto:?subject=${subject}&body=${body}`, "_self");
+  });
+  container.appendChild(emailBtn);
+
+  // QR Code
+  let qrPopover = null;
+  const qrBtn = makeShareBtn(SHARE_ICONS.qr, "QR Code");
+  qrBtn.style.position = "relative";
+  qrBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (qrPopover?.parentNode) {
+      qrPopover.remove();
+      qrPopover = null;
+      return;
+    }
+    qrPopover = document.createElement("div");
+    qrPopover.className = "qr-popover";
+
+    const canvas = document.createElement("canvas");
+    import("qr-creator").then((mod) => {
+      const QrCreator = mod.default;
+      QrCreator.render(
+        {
+          text: url,
+          radius: 0.4,
+          ecLevel: "M",
+          fill: "#f0ebe3",
+          background: "#161514",
+          size: 160,
+        },
+        canvas,
+      );
+    });
+    qrPopover.appendChild(canvas);
+
+    const downloadLink = document.createElement("a");
+    downloadLink.className = "qr-download";
+    downloadLink.textContent = "Download";
+    downloadLink.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      const dataUrl = canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = "poll-qr.png";
+      a.click();
+    });
+    qrPopover.appendChild(downloadLink);
+    qrBtn.appendChild(qrPopover);
+
+    // Reposition if clipped by viewport edges
+    requestAnimationFrame(() => {
+      const rect = qrPopover.getBoundingClientRect();
+      if (rect.left < 8) {
+        qrPopover.style.left = "0";
+        qrPopover.style.transform = "none";
+      } else if (rect.right > window.innerWidth - 8) {
+        qrPopover.style.left = "auto";
+        qrPopover.style.right = "0";
+        qrPopover.style.transform = "none";
+      }
+      if (rect.bottom > window.innerHeight - 8) {
+        qrPopover.style.top = "auto";
+        qrPopover.style.bottom = "calc(100% + 8px)";
+      }
+    });
+
+    const dismiss = (ev) => {
+      if (!qrPopover || qrPopover.contains(ev.target)) return;
+      qrPopover.remove();
+      qrPopover = null;
+      document.removeEventListener("click", dismiss);
+    };
+    setTimeout(() => document.addEventListener("click", dismiss), 0);
+  });
+  container.appendChild(qrBtn);
+
+  // Native share (conditional)
+  if (navigator.share) {
+    const shareBtn = makeShareBtn(SHARE_ICONS.share, "Share");
+    shareBtn.addEventListener("click", () => {
+      navigator.share({ title: title || "Poll", url }).catch(() => {});
+    });
+    container.appendChild(shareBtn);
+  }
+}
+
+function makeShareBtn(iconHtml, label) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "share-btn";
+  btn.innerHTML = `${iconHtml}<span>${label}</span>`;
+  return btn;
 }

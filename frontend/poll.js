@@ -1,4 +1,12 @@
-import { escapeHtml, getVoterToken, startCountdown, connectWs, renderResults } from "./shared.js";
+import {
+  connectWs,
+  escapeHtml,
+  getVoterToken,
+  renderResults,
+  renderShareButtons,
+  setupCopyHandlers,
+  startCountdown,
+} from "./shared.js";
 
 const shareId = window.location.pathname.split("/").pop();
 let features = { websocket: true };
@@ -17,6 +25,8 @@ const resultsEl = document.getElementById("results");
 const totalVotesEl = document.getElementById("total-votes");
 const errorEl = document.getElementById("error");
 const voteBtn = document.getElementById("vote-btn");
+
+const showToast = setupCopyHandlers(document.getElementById("copy-toast"));
 
 let hasVoted = false;
 
@@ -61,6 +71,15 @@ async function loadPoll() {
 
     loadingEl.classList.add("hidden");
     pollViewEl.classList.remove("hidden");
+
+    const shareSection = document.getElementById("share-section");
+    renderShareButtons(
+      document.getElementById("share-actions"),
+      `${window.location.origin}/poll/${shareId}`,
+      data.poll.question,
+      showToast,
+    );
+    shareSection.classList.remove("hidden");
 
     if (isScheduled) {
       voteSectionEl.classList.add("hidden");

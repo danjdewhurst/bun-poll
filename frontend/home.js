@@ -1,4 +1,4 @@
-import { setupCopyHandlers } from "./shared.js";
+import { renderShareButtons, setupCopyHandlers } from "./shared.js";
 
 const form = document.getElementById("poll-form");
 const formCard = document.getElementById("form-card");
@@ -22,7 +22,7 @@ startsAtInput.min = now.toISOString().slice(0, 16);
 
 let optionCount = 2;
 
-setupCopyHandlers(document.getElementById("copy-toast"));
+const showToast = setupCopyHandlers(document.getElementById("copy-toast"));
 
 function renumberOptions() {
   const numbers = optionsList.querySelectorAll(".option-number");
@@ -135,10 +135,13 @@ form.addEventListener("submit", async (e) => {
     }
 
     const origin = window.location.origin;
-    shareLinkEl.querySelector(".link-text").textContent = `${origin}/poll/${data.share_id}`;
+    const pollUrl = `${origin}/poll/${data.share_id}`;
+    shareLinkEl.querySelector(".link-text").textContent = pollUrl;
     adminLinkEl.querySelector(".link-text").textContent = `${origin}/admin/${data.admin_id}`;
     formCard.classList.add("hidden");
     resultEl.classList.remove("hidden");
+
+    renderShareButtons(document.getElementById("share-actions"), pollUrl, data.question, showToast);
   } catch (err) {
     errorEl.textContent = err.message;
     errorEl.classList.remove("hidden");

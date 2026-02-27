@@ -1,4 +1,4 @@
-import { connectWs, setupCopyHandlers, renderResults } from "./shared.js";
+import { connectWs, renderResults, renderShareButtons, setupCopyHandlers } from "./shared.js";
 
 const adminId = window.location.pathname.split("/").pop();
 
@@ -59,7 +59,15 @@ async function loadAdmin() {
     }
 
     const origin = window.location.origin;
-    shareLinkEl.querySelector(".link-text").textContent = `${origin}/poll/${shareId}`;
+    const pollUrl = `${origin}/poll/${shareId}`;
+    shareLinkEl.querySelector(".link-text").textContent = pollUrl;
+
+    renderShareButtons(
+      document.getElementById("share-actions"),
+      pollUrl,
+      data.poll.question,
+      showToast,
+    );
 
     const embedSnippetEl = document.getElementById("embed-snippet");
     embedSnippetEl.querySelector(".link-text").textContent =

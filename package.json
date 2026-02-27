@@ -17,5 +17,8 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "qr-creator": "^1.0.0"
   }
 }
