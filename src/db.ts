@@ -49,6 +49,13 @@ try {
   // Column already exists
 }
 
+try {
+  db.run(`ALTER TABLE votes ADD COLUMN voter_ip TEXT NOT NULL DEFAULT ''`);
+} catch {
+  // Column already exists — safe to ignore
+}
+
+db.run(`CREATE INDEX IF NOT EXISTS idx_votes_poll_ip ON votes(poll_id, voter_ip)`);
 export const insertPoll = db.prepare<
   { id: number; share_id: string; admin_id: string },
   [string, string, string, number, number | null, number | null, number]
@@ -106,12 +113,16 @@ export const getResultsByPollId = db.prepare<
    ORDER BY o.position`,
 );
 
-export const insertVote = db.prepare<void, [number, number, string, number]>(
-  `INSERT OR IGNORE INTO votes (poll_id, option_id, voter_token, created_at) VALUES (?, ?, ?, ?)`,
+export const insertVote = db.prepare<void, [number, number, string, string, number]>(
+  `INSERT OR IGNORE INTO votes (poll_id, option_id, voter_token, voter_ip, created_at) VALUES (?, ?, ?, ?, ?)`,
 );
 
 export const hasVoted = db.prepare<{ cnt: number }, [number, string]>(
   `SELECT COUNT(*) AS cnt FROM votes WHERE poll_id = ? AND voter_token = ?`,
+);
+
+export const hasVotedByIp = db.prepare<{ cnt: number }, [number, string]>(
+  `SELECT COUNT(*) AS cnt FROM votes WHERE poll_id = ? AND voter_ip = ? AND voter_ip != ''`,
 );
 
 export const getTotalVotes = db.prepare<{ cnt: number }, [number]>(

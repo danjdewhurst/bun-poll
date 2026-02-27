@@ -1,7 +1,7 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: test helpers use loose typing for API response assertions
 // biome-ignore-all lint/style/noNonNullAssertion: test assertions where index access is known-safe
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { db } from "./src/db.ts";
+import { db, insertVote } from "./src/db.ts";
 import { _overrideFeaturesForTest, getFeatures } from "./src/features.ts";
 import { resetRateLimitStore } from "./src/rate-limit.ts";
 
@@ -391,25 +391,12 @@ describe("GET /api/polls/admin/:adminId/export", () => {
     const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
     const pollData = (await pollRes.json()) as any;
 
-    // Cast 2 votes on first option, 1 on second
-    for (let i = 0; i < 2; i++) {
-      await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          option_ids: [pollData.options[0].id],
-          voter_token: crypto.randomUUID(),
-        }),
-      });
-    }
-    await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        option_ids: [pollData.options[1].id],
-        voter_token: crypto.randomUUID(),
-      }),
-    });
+    // Insert votes directly to bypass IP dedup (all test requests share loopback IP)
+    const pollId = pollData.options[0].poll_id;
+    const now = Date.now();
+    insertVote.run(pollId, pollData.options[0].id, crypto.randomUUID(), "10.0.0.1", now);
+    insertVote.run(pollId, pollData.options[0].id, crypto.randomUUID(), "10.0.0.2", now);
+    insertVote.run(pollId, pollData.options[1].id, crypto.randomUUID(), "10.0.0.3", now);
 
     const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/export?format=csv`);
     const text = await res.text();
@@ -937,5 +924,54 @@ describe("Scheduled polls", () => {
     const res = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
     const data = (await res.json()) as any;
     expect(data.poll.starts_at).toBeNull();
+  });
+});
+
+describe("Voter integrity — IP dedup", () => {
+  test("rejects vote from same IP with different token", async () => {
+    const { data: created } = await createTestPoll();
+    const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
+    const pollData = (await pollRes.json()) as any;
+    const optionId = pollData.options[0].id;
+
+    // First vote succeeds
+    const res1 = await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ option_ids: [optionId], voter_token: crypto.randomUUID() }),
+    });
+    expect(res1.status).toBe(200);
+
+    // Second vote from same IP (loopback) with different token — should be rejected
+    const res2 = await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ option_ids: [optionId], voter_token: crypto.randomUUID() }),
+    });
+    expect(res2.status).toBe(409);
+    const data = (await res2.json()) as any;
+    expect(data.error).toBe("Already voted");
+  });
+
+  test("has_voted reflects IP match even with fresh token", async () => {
+    const { data: created } = await createTestPoll();
+    const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
+    const pollData = (await pollRes.json()) as any;
+    const optionId = pollData.options[0].id;
+
+    // Vote with one token
+    await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ option_ids: [optionId], voter_token: crypto.randomUUID() }),
+    });
+
+    // Check with a completely different token — should still show has_voted due to IP
+    const freshToken = crypto.randomUUID();
+    const checkRes = await fetch(
+      `${baseUrl}/api/polls/${created.share_id}?voter_token=${freshToken}`,
+    );
+    const checkData = (await checkRes.json()) as any;
+    expect(checkData.has_voted).toBe(true);
   });
 });

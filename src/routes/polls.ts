@@ -7,6 +7,7 @@ import {
   getResultsByPollId,
   getTotalVotes,
   hasVoted,
+  hasVotedByIp,
   insertOption,
   insertPoll,
   insertVote,
@@ -31,11 +32,12 @@ function generateShareId(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function buildResults(pollId: number, voterToken?: string) {
+function buildResults(pollId: number, voterToken?: string, clientIp?: string) {
   const options = getResultsByPollId.all(pollId);
   const total = getTotalVotes.get(pollId)?.cnt ?? 0;
-  const voted = voterToken ? (hasVoted.get(pollId, voterToken)?.cnt ?? 0) > 0 : false;
-  return { options, total_votes: total, has_voted: voted };
+  const tokenVoted = voterToken ? (hasVoted.get(pollId, voterToken)?.cnt ?? 0) > 0 : false;
+  const ipVoted = clientIp ? (hasVotedByIp.get(pollId, clientIp)?.cnt ?? 0) > 0 : false;
+  return { options, total_votes: total, has_voted: tokenVoted || ipVoted };
 }
 
 function broadcastResults(pollId: number, shareId: string): void {
@@ -153,7 +155,8 @@ export function getPoll(req: ParamsRequest<{ shareId: string }>): Response {
     return Response.json({ error: "Poll not found" }, { status: 404 });
   }
 
-  const { options, total_votes, has_voted } = buildResults(poll.id, voterToken);
+  const clientIp = getClientIp(req);
+  const { options, total_votes, has_voted } = buildResults(poll.id, voterToken, clientIp);
 
   return Response.json({
     poll: {
@@ -217,6 +220,11 @@ export async function votePoll(req: ParamsRequest<{ shareId: string }>): Promise
     return Response.json({ error: "Already voted" }, { status: 409 });
   }
 
+  const ipVoted = (hasVotedByIp.get(poll.id, clientIp)?.cnt ?? 0) > 0;
+  if (ipVoted) {
+    return Response.json({ error: "Already voted" }, { status: 409 });
+  }
+
   const validOptionIds = new Set(getOptionIdsByPollId.all(poll.id).map((o) => o.id));
 
   const now = Date.now();
@@ -224,7 +232,7 @@ export async function votePoll(req: ParamsRequest<{ shareId: string }>): Promise
     if (!validOptionIds.has(optionId)) {
       return Response.json({ error: `Invalid option ID: ${optionId}` }, { status: 400 });
     }
-    insertVote.run(poll.id, optionId, body.voter_token, now);
+    insertVote.run(poll.id, optionId, body.voter_token, clientIp, now);
   }
 
   broadcastResults(poll.id, shareId);
