@@ -317,6 +317,40 @@ body {
   vertical-align: middle;
 }
 
+.embed-scheduled-badge {
+  display: inline-flex;
+  font-family: var(--font-body);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: #fef9e7;
+  color: #b45309;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+
+.embed-countdown {
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--embed-text);
+  padding: 0.5rem 0;
+}
+
+.embed-scheduled-hint {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--embed-text-muted);
+  margin-bottom: 0.25rem;
+  text-align: center;
+}
+
 /* ── Footer link ── */
 
 .embed-footer {

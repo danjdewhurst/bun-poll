@@ -186,7 +186,8 @@ label {
 }
 
 input[type="text"],
-input[type="number"] {
+input[type="number"],
+input[type="datetime-local"] {
   width: 100%;
   padding: 0.65rem 0.875rem;
   background: var(--surface-raised);
@@ -202,14 +203,25 @@ input[type="number"] {
 }
 
 input[type="text"]::placeholder,
-input[type="number"]::placeholder {
+input[type="number"]::placeholder,
+input[type="datetime-local"]::placeholder {
   color: var(--text-muted);
 }
 
 input[type="text"]:focus,
-input[type="number"]:focus {
+input[type="number"]:focus,
+input[type="datetime-local"]:focus {
   border-color: var(--accent-solid);
   box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+input[type="datetime-local"] {
+  color-scheme: dark;
+}
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+  cursor: pointer;
 }
 
 .question-input {
