@@ -12,6 +12,7 @@ No frameworks. No npm bloat. Just fast, live polls with WebSocket-powered update
 [![TypeScript](https://img.shields.io/badge/lang-TypeScript-3178c6?logo=typescript&logoColor=fff)](https://www.typescriptlang.org/)
 [![SQLite](https://img.shields.io/badge/database-SQLite-003B57?logo=sqlite&logoColor=fff)](https://www.sqlite.org/)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](#)
+[![CI](https://github.com/danjdewhurst/bun-poll/actions/workflows/ci.yml/badge.svg)](https://github.com/danjdewhurst/bun-poll/actions/workflows/ci.yml)
 
 ![bun-poll preview](preview.png)
 
