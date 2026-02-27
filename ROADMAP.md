@@ -6,14 +6,15 @@ Ideas and planned improvements for bun-poll. Contributions welcome — pick anyt
 
 ## Near Term
 
-### Code Quality
-- Set up Biome for linting and formatting
-- Add GitHub Actions workflow to run tests and checks on PRs into main
-
 ### Input Guardrails
 - Max length limits on questions and options
 - Rate limiting on the vote endpoint (per IP / per token)
 - Content-Security-Policy headers
+
+### Feature Flags
+- Allow users to completely disable certain features (e.g. exports, WebSocket live updates, admin management actions)
+- Simple config object or environment variables to toggle features on/off
+- Disabled features should hide their UI elements and return appropriate API responses
 
 ### Live Viewer Count
 - Show "X people watching" on the poll and admin pages
@@ -81,6 +82,10 @@ Ideas and planned improvements for bun-poll. Contributions welcome — pick anyt
 ---
 
 ## Done
+
+### Code Quality
+- Biome for linting and formatting with `bun run lint`, `bun run format`, and `bun run check`
+- GitHub Actions CI workflow runs lint and tests on pushes and PRs to `main`
 
 ### Poll Management
 - Admin can close voting early via `POST /api/polls/admin/:adminId/close`
