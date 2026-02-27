@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/danjdewhurst/bun-poll/compare/v1.0.0...v1.1.0) (2026-02-27)
+
+
+### Features
+
+* add feature flags to toggle exports, WebSocket, and admin management ([553089c](https://github.com/danjdewhurst/bun-poll/commit/553089c8317714194a0f67cce2c070ced096e53f))
+
 ## 1.0.0 (2026-02-27)
 
 
