@@ -1,3 +1,5 @@
+import { setupCopyHandlers } from "./shared.js";
+
 const form = document.getElementById("poll-form");
 const formCard = document.getElementById("form-card");
 const optionsList = document.getElementById("options-list");
@@ -7,7 +9,6 @@ const resultEl = document.getElementById("result");
 const shareLinkEl = document.getElementById("share-link");
 const adminLinkEl = document.getElementById("admin-link");
 const submitBtn = document.getElementById("submit-btn");
-const copyToast = document.getElementById("copy-toast");
 
 const MAX_QUESTION_LENGTH = 500;
 const MAX_OPTION_LENGTH = 200;
@@ -20,6 +21,8 @@ now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
 startsAtInput.min = now.toISOString().slice(0, 16);
 
 let optionCount = 2;
+
+setupCopyHandlers(document.getElementById("copy-toast"));
 
 function renumberOptions() {
   const numbers = optionsList.querySelectorAll(".option-number");
@@ -141,42 +144,5 @@ form.addEventListener("submit", async (e) => {
     errorEl.classList.remove("hidden");
   } finally {
     submitBtn.disabled = false;
-  }
-});
-
-let toastTimer = null;
-function showToast(text) {
-  copyToast.textContent = text || "Copied to clipboard";
-  copyToast.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => copyToast.classList.remove("show"), 2000);
-}
-
-function handleCopy(box) {
-  const text = box.querySelector(".link-text").textContent;
-  navigator.clipboard
-    .writeText(text)
-    .then(() => {
-      box.classList.add("copied");
-      showToast();
-      setTimeout(() => box.classList.remove("copied"), 2000);
-    })
-    .catch(() => {
-      showToast("Failed to copy \u2014 please copy manually");
-    });
-}
-
-document.addEventListener("click", (e) => {
-  const box = e.target.closest("[data-copy]");
-  if (box) handleCopy(box);
-});
-
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" || e.key === " ") {
-    const box = e.target.closest("[data-copy]");
-    if (box) {
-      e.preventDefault();
-      handleCopy(box);
-    }
   }
 });

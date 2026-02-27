@@ -1,17 +1,8 @@
+import { escapeHtml, getVoterToken, startCountdown, connectWs, renderResults } from "./shared.js";
+
 const shareId = window.location.pathname.split("/").pop();
 let features = { websocket: true };
-const VOTER_TOKEN_KEY = `voter_token_${shareId}`;
-
-function getVoterToken() {
-  let token = localStorage.getItem(VOTER_TOKEN_KEY);
-  if (!token) {
-    token = crypto.randomUUID();
-    localStorage.setItem(VOTER_TOKEN_KEY, token);
-  }
-  return token;
-}
-
-const voterToken = getVoterToken();
+const voterToken = getVoterToken(shareId);
 
 const loadingEl = document.getElementById("loading");
 const pollViewEl = document.getElementById("poll-view");
@@ -24,87 +15,14 @@ const voteHintEl = document.getElementById("vote-hint");
 const resultsSectionEl = document.getElementById("results-section");
 const resultsEl = document.getElementById("results");
 const totalVotesEl = document.getElementById("total-votes");
-const wsDotEl = document.getElementById("ws-dot");
-const wsTextEl = document.getElementById("ws-text");
 const errorEl = document.getElementById("error");
 const voteBtn = document.getElementById("vote-btn");
 
 let hasVoted = false;
 
-function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-function renderResults(options, totalVotes) {
-  resultsEl.innerHTML = "";
-  for (const opt of options) {
-    const pct = totalVotes > 0 ? (opt.votes / totalVotes) * 100 : 0;
-    const pctDisplay = pct % 1 === 0 ? pct.toFixed(0) : pct.toFixed(1);
-    const bar = document.createElement("div");
-    bar.className = "result-bar";
-    bar.innerHTML = `
-      <div class="label-row">
-        <span class="option-name">${escapeHtml(opt.text)}</span>
-        <span class="option-stats">${opt.votes} vote${opt.votes !== 1 ? "s" : ""}</span>
-      </div>
-      <div class="bar">
-        <div class="fill" style="width: ${pct}%"></div>
-        <span class="pct-overlay">${pctDisplay}%</span>
-      </div>
-    `;
-    resultsEl.appendChild(bar);
-  }
-  totalVotesEl.textContent = `${totalVotes} total vote${totalVotes !== 1 ? "s" : ""}`;
-}
-
 function showResults(options, totalVotes) {
-  renderResults(options, totalVotes);
+  renderResults(resultsEl, totalVotesEl, options, totalVotes);
   resultsSectionEl.classList.remove("hidden");
-}
-
-let wsReconnectDelay = 2000;
-const WS_MAX_DELAY = 30000;
-const WS_MAX_RETRIES = 20;
-let wsRetryCount = 0;
-
-function connectWs() {
-  const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-  const ws = new WebSocket(`${protocol}//${location.host}/ws/${shareId}`);
-
-  ws.addEventListener("open", () => {
-    wsDotEl.classList.remove("disconnected");
-    wsTextEl.textContent = "Live";
-    wsReconnectDelay = 2000;
-    wsRetryCount = 0;
-  });
-
-  ws.addEventListener("message", (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      if (data.type === "results") {
-        showResults(data.options, data.total_votes);
-      }
-      if (data.type === "viewers") {
-        document.getElementById("viewer-count").textContent = data.count;
-      }
-    } catch {
-      // Ignore malformed messages
-    }
-  });
-
-  ws.addEventListener("close", () => {
-    wsDotEl.classList.add("disconnected");
-    if (wsRetryCount >= WS_MAX_RETRIES) {
-      wsTextEl.textContent = "Disconnected";
-      return;
-    }
-    wsTextEl.textContent = "Reconnecting\u2026";
-    setTimeout(connectWs, wsReconnectDelay);
-    wsReconnectDelay = Math.min(wsReconnectDelay * 1.5, WS_MAX_DELAY);
-    wsRetryCount++;
-  });
 }
 
 async function loadPoll() {
@@ -147,7 +65,7 @@ async function loadPoll() {
     if (isScheduled) {
       voteSectionEl.classList.add("hidden");
       scheduledSectionEl.classList.remove("hidden");
-      startCountdown(data.poll.starts_at);
+      startCountdown(data.poll.starts_at, countdownTimerEl);
     } else if (hasVoted || isExpired) {
       voteSectionEl.classList.add("hidden");
       showResults(data.options, data.total_votes);
@@ -156,7 +74,19 @@ async function loadPoll() {
     }
 
     if (features.websocket) {
-      connectWs();
+      connectWs({
+        shareId,
+        statusDot: document.getElementById("ws-dot"),
+        statusText: document.getElementById("ws-text"),
+        onMessage(data) {
+          if (data.type === "results") {
+            showResults(data.options, data.total_votes);
+          }
+          if (data.type === "viewers") {
+            document.getElementById("viewer-count").textContent = data.count;
+          }
+        },
+      });
     } else {
       document.getElementById("ws-status").classList.add("hidden");
       document.getElementById("viewer-bar").classList.add("hidden");
@@ -225,27 +155,5 @@ document.getElementById("vote-form").addEventListener("submit", async (e) => {
     voteBtn.disabled = false;
   }
 });
-
-function startCountdown(startsAt) {
-  function update() {
-    const remaining = startsAt - Date.now();
-    if (remaining <= 0) {
-      window.location.reload();
-      return;
-    }
-    const totalSeconds = Math.floor(remaining / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    const parts = [];
-    if (hours > 0) parts.push(`${hours}h`);
-    if (minutes > 0 || hours > 0) parts.push(`${String(minutes).padStart(2, "0")}m`);
-    parts.push(`${String(seconds).padStart(2, "0")}s`);
-    countdownTimerEl.textContent = parts.join(" ");
-  }
-  update();
-  setInterval(update, 1000);
-}
 
 loadPoll();
