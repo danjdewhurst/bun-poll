@@ -71,43 +71,6 @@ Open **[http://localhost:3000](http://localhost:3000)** to create your first pol
 
 ---
 
-## API Reference
-
-### Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/polls` | Create a poll |
-| `GET` | `/api/polls/:shareId` | Get poll with results |
-| `POST` | `/api/polls/:shareId/vote` | Submit a vote |
-| `GET` | `/api/polls/admin/:adminId` | Get poll results (admin) |
-
-### WebSocket
-
-Connect to `/ws/:shareId` to receive live result broadcasts on each vote.
-
-### Example: Create a Poll
-
-```bash
-curl -X POST http://localhost:3000/api/polls \
-  -H "Content-Type: application/json" \
-  -d '{
-    "question": "Favourite language?",
-    "options": ["TypeScript", "Rust", "Go"],
-    "allow_multiple": false,
-    "expires_in_minutes": 60
-  }'
-```
-
-```json
-{
-  "share_id": "a1b2c3d4",
-  "admin_id": "uuid-..."
-}
-```
-
----
-
 ## Project Structure
 
 ```
