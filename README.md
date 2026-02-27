@@ -137,6 +137,23 @@ bun run check
 
 ---
 
+## Releases
+
+Versioning is fully automated via [Release Please](https://github.com/googleapis/release-please). On every push to `main`, the workflow analyses conventional commit messages and:
+
+1. Creates or updates a **Release PR** with a version bump and changelog
+2. When merged, tags the release and publishes a **GitHub Release**
+
+Version bumps follow [Semantic Versioning](https://semver.org):
+
+| Commit prefix | Version bump | Example |
+|---|---|---|
+| `fix:` | Patch | 0.1.0 → 0.1.1 |
+| `feat:` | Minor | 0.1.0 → 0.2.0 |
+| `feat!:` / `BREAKING CHANGE:` | Major | 0.1.0 → 1.0.0 |
+
+---
+
 ## Requirements
 
 - [Bun](https://bun.sh) v1.1.0+
