@@ -13,15 +13,19 @@ import {
   resetVotesStmt,
 } from "../db.ts";
 import { checkRateLimit } from "../rate-limit.ts";
-import { getServer } from "../server-ref.ts";
+import { getClientIp, getServer } from "../server-ref.ts";
 import type { CreatePollRequest, VoteRequest, WsMessage } from "../types.ts";
 
 const MAX_QUESTION_LENGTH = 500;
 const MAX_OPTION_LENGTH = 200;
 const MAX_OPTIONS = 20;
+const MAX_EXPIRES_MINUTES = 525_600; // 1 year
+const VOTER_TOKEN_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type ParamsRequest<T extends Record<string, string>> = Request & { params: T };
 
 function generateShareId(): string {
-  const bytes = new Uint8Array(4);
+  const bytes = new Uint8Array(8);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
@@ -39,69 +43,90 @@ function broadcastResults(pollId: number, shareId: string): void {
   getServer().publish(`poll-${shareId}`, JSON.stringify(message));
 }
 
-export function createPoll(req: Request): Promise<Response> {
-  return (req.json() as Promise<CreatePollRequest>).then((body) => {
-    const question = body.question?.trim() ?? "";
+export async function createPoll(req: Request): Promise<Response> {
+  const clientIp = getClientIp(req);
+  const { limited, retryAfter } = checkRateLimit(clientIp);
+  if (limited) {
+    return Response.json(
+      { error: "Too many requests", retry_after: retryAfter },
+      { status: 429, headers: { "Retry-After": String(retryAfter) } },
+    );
+  }
 
-    if (!question) {
-      return Response.json({ error: "Question is required" }, { status: 400 });
-    }
-    if (question.length > MAX_QUESTION_LENGTH) {
+  const body = (await req.json()) as CreatePollRequest;
+  const question = body.question?.trim() ?? "";
+
+  if (!question) {
+    return Response.json({ error: "Question is required" }, { status: 400 });
+  }
+  if (question.length > MAX_QUESTION_LENGTH) {
+    return Response.json(
+      { error: `Question must be ${MAX_QUESTION_LENGTH} characters or fewer` },
+      { status: 400 },
+    );
+  }
+  if (!Array.isArray(body.options) || body.options.length < 2) {
+    return Response.json({ error: "At least 2 options required" }, { status: 400 });
+  }
+  if (body.options.length > MAX_OPTIONS) {
+    return Response.json({ error: `Maximum of ${MAX_OPTIONS} options allowed` }, { status: 400 });
+  }
+
+  if (body.expires_in_minutes !== undefined && body.expires_in_minutes !== null) {
+    if (
+      typeof body.expires_in_minutes !== "number" ||
+      !Number.isInteger(body.expires_in_minutes) ||
+      body.expires_in_minutes < 1 ||
+      body.expires_in_minutes > MAX_EXPIRES_MINUTES
+    ) {
       return Response.json(
-        { error: `Question must be ${MAX_QUESTION_LENGTH} characters or fewer` },
+        { error: `Expiry must be an integer between 1 and ${MAX_EXPIRES_MINUTES} minutes` },
         { status: 400 },
       );
     }
-    if (!Array.isArray(body.options) || body.options.length < 2) {
-      return Response.json({ error: "At least 2 options required" }, { status: 400 });
+  }
+
+  const trimmedOptions: string[] = [];
+  for (let i = 0; i < body.options.length; i++) {
+    const opt = body.options[i]?.trim() ?? "";
+    if (!opt) {
+      return Response.json({ error: `Option ${i + 1} cannot be empty` }, { status: 400 });
     }
-    if (body.options.length > MAX_OPTIONS) {
-      return Response.json({ error: `Maximum of ${MAX_OPTIONS} options allowed` }, { status: 400 });
+    if (opt.length > MAX_OPTION_LENGTH) {
+      return Response.json(
+        { error: `Option ${i + 1} must be ${MAX_OPTION_LENGTH} characters or fewer` },
+        { status: 400 },
+      );
     }
+    trimmedOptions.push(opt);
+  }
 
-    const trimmedOptions: string[] = [];
-    for (let i = 0; i < body.options.length; i++) {
-      const opt = body.options[i]?.trim() ?? "";
-      if (!opt) {
-        return Response.json({ error: `Option ${i + 1} cannot be empty` }, { status: 400 });
-      }
-      if (opt.length > MAX_OPTION_LENGTH) {
-        return Response.json(
-          { error: `Option ${i + 1} must be ${MAX_OPTION_LENGTH} characters or fewer` },
-          { status: 400 },
-        );
-      }
-      trimmedOptions.push(opt);
-    }
+  const shareId = generateShareId();
+  const adminId = crypto.randomUUID();
+  const allowMultiple = body.allow_multiple ? 1 : 0;
+  const expiresAt = body.expires_in_minutes ? Date.now() + body.expires_in_minutes * 60_000 : null;
+  const now = Date.now();
 
-    const shareId = generateShareId();
-    const adminId = crypto.randomUUID();
-    const allowMultiple = body.allow_multiple ? 1 : 0;
-    const expiresAt = body.expires_in_minutes
-      ? Date.now() + body.expires_in_minutes * 60_000
-      : null;
-    const now = Date.now();
+  const poll = insertPoll.get(shareId, adminId, question, allowMultiple, expiresAt, now);
 
-    const poll = insertPoll.get(shareId, adminId, question, allowMultiple, expiresAt, now);
+  if (!poll) {
+    return Response.json({ error: "Failed to create poll" }, { status: 500 });
+  }
 
-    if (!poll) {
-      return Response.json({ error: "Failed to create poll" }, { status: 500 });
-    }
+  for (let i = 0; i < trimmedOptions.length; i++) {
+    // biome-ignore lint/style/noNonNullAssertion: index is within bounds from for loop
+    insertOption.run(poll.id, trimmedOptions[i]!, i);
+  }
 
-    for (let i = 0; i < trimmedOptions.length; i++) {
-      insertOption.run(poll.id, trimmedOptions[i]!, i);
-    }
-
-    return Response.json({
-      share_id: poll.share_id,
-      admin_id: poll.admin_id,
-    });
+  return Response.json({
+    share_id: poll.share_id,
+    admin_id: poll.admin_id,
   });
 }
 
-export function getPoll(req: Request): Response | Promise<Response> {
+export function getPoll(req: ParamsRequest<{ shareId: string }>): Response {
+  const shareId = req.params.shareId;
   const url = new URL(req.url);
-  const shareId = url.pathname.split("/").pop()!;
   const voterToken = url.searchParams.get("voter_token") ?? undefined;
 
   const poll = getPollByShareId.get(shareId);
@@ -113,7 +138,6 @@ export function getPoll(req: Request): Response | Promise<Response> {
 
   return Response.json({
     poll: {
-      id: poll.id,
       share_id: poll.share_id,
       question: poll.question,
       allow_multiple: poll.allow_multiple,
@@ -126,15 +150,7 @@ export function getPoll(req: Request): Response | Promise<Response> {
   });
 }
 
-function getClientIp(req: Request): string {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("x-real-ip") ||
-    "unknown"
-  );
-}
-
-export function votePoll(req: Request): Response | Promise<Response> {
+export async function votePoll(req: ParamsRequest<{ shareId: string }>): Promise<Response> {
   const clientIp = getClientIp(req);
   const { limited, retryAfter } = checkRateLimit(clientIp);
   if (limited) {
@@ -147,53 +163,72 @@ export function votePoll(req: Request): Response | Promise<Response> {
     );
   }
 
-  const url = new URL(req.url);
-  const parts = url.pathname.split("/");
-  const shareId = parts[parts.length - 2]!;
+  const shareId = req.params.shareId;
 
   const poll = getPollByShareId.get(shareId);
   if (!poll) {
     return Response.json({ error: "Poll not found" }, { status: 404 });
   }
 
-  if (poll.expires_at && Date.now() > poll.expires_at) {
+  if (poll.expires_at && Date.now() >= poll.expires_at) {
     return Response.json({ error: "Poll has expired" }, { status: 410 });
   }
 
-  return (req.json() as Promise<VoteRequest>).then((body) => {
-    if (!body.voter_token || !Array.isArray(body.option_ids) || body.option_ids.length === 0) {
-      return Response.json({ error: "Invalid vote request" }, { status: 400 });
+  const body = (await req.json()) as VoteRequest;
+
+  if (!body.voter_token || !Array.isArray(body.option_ids) || body.option_ids.length === 0) {
+    return Response.json({ error: "Invalid vote request" }, { status: 400 });
+  }
+
+  if (!VOTER_TOKEN_PATTERN.test(body.voter_token)) {
+    return Response.json({ error: "Invalid voter token format" }, { status: 400 });
+  }
+
+  if (!poll.allow_multiple && body.option_ids.length !== 1) {
+    return Response.json({ error: "Only one option allowed" }, { status: 400 });
+  }
+
+  const alreadyVoted = (hasVoted.get(poll.id, body.voter_token)?.cnt ?? 0) > 0;
+  if (alreadyVoted) {
+    return Response.json({ error: "Already voted" }, { status: 409 });
+  }
+
+  const validOptionIds = new Set(getOptionIdsByPollId.all(poll.id).map((o) => o.id));
+
+  const now = Date.now();
+  for (const optionId of body.option_ids) {
+    if (!validOptionIds.has(optionId)) {
+      return Response.json({ error: `Invalid option ID: ${optionId}` }, { status: 400 });
     }
+    insertVote.run(poll.id, optionId, body.voter_token, now);
+  }
 
-    if (!poll.allow_multiple && body.option_ids.length !== 1) {
-      return Response.json({ error: "Only one option allowed" }, { status: 400 });
-    }
+  broadcastResults(poll.id, shareId);
 
-    const alreadyVoted = (hasVoted.get(poll.id, body.voter_token)?.cnt ?? 0) > 0;
-    if (alreadyVoted) {
-      return Response.json({ error: "Already voted" }, { status: 409 });
-    }
-
-    const validOptionIds = new Set(getOptionIdsByPollId.all(poll.id).map((o) => o.id));
-
-    const now = Date.now();
-    for (const optionId of body.option_ids) {
-      if (!validOptionIds.has(optionId)) {
-        return Response.json({ error: `Invalid option ID: ${optionId}` }, { status: 400 });
-      }
-      insertVote.run(poll.id, optionId, body.voter_token, now);
-    }
-
-    broadcastResults(poll.id, shareId);
-
-    const { options, total_votes } = buildResults(poll.id, body.voter_token);
-    return Response.json({ options, total_votes, has_voted: true });
-  });
+  const { options, total_votes } = buildResults(poll.id, body.voter_token);
+  return Response.json({ options, total_votes, has_voted: true });
 }
 
-export function getAdminPoll(req: Request): Response {
-  const url = new URL(req.url);
-  const adminId = url.pathname.split("/").pop()!;
+function safePoll(poll: {
+  id: number;
+  share_id: string;
+  admin_id: string;
+  question: string;
+  allow_multiple: number;
+  expires_at: number | null;
+  created_at: number;
+}) {
+  return {
+    share_id: poll.share_id,
+    question: poll.question,
+    allow_multiple: poll.allow_multiple,
+    expires_at: poll.expires_at,
+    created_at: poll.created_at,
+  };
+}
+
+export function getAdminPoll(req: ParamsRequest<{ adminId: string }>): Response {
+  const adminId = req.params.adminId;
 
   const poll = getPollByAdminId.get(adminId);
   if (!poll) {
@@ -203,7 +238,7 @@ export function getAdminPoll(req: Request): Response {
   const { options, total_votes } = buildResults(poll.id);
 
   return Response.json({
-    poll,
+    poll: safePoll(poll),
     options,
     total_votes,
   });
@@ -216,11 +251,9 @@ function escapeCsvField(value: string): string {
   return value;
 }
 
-export function exportPoll(req: Request): Response {
+export function exportPoll(req: ParamsRequest<{ adminId: string }>): Response {
+  const adminId = req.params.adminId;
   const url = new URL(req.url);
-  const parts = url.pathname.split("/");
-  // /api/polls/admin/:adminId/export → adminId is at index parts.length - 2
-  const adminId = parts[parts.length - 2]!;
   const format = url.searchParams.get("format") ?? "json";
 
   const poll = getPollByAdminId.get(adminId);
@@ -270,11 +303,8 @@ export function exportPoll(req: Request): Response {
   });
 }
 
-export function summaryPoll(req: Request): Response {
-  const url = new URL(req.url);
-  const parts = url.pathname.split("/");
-  // /api/polls/admin/:adminId/summary → adminId is at index parts.length - 2
-  const adminId = parts[parts.length - 2]!;
+export function summaryPoll(req: ParamsRequest<{ adminId: string }>): Response {
+  const adminId = req.params.adminId;
 
   const poll = getPollByAdminId.get(adminId);
   if (!poll) {
@@ -299,18 +329,15 @@ export function summaryPoll(req: Request): Response {
   });
 }
 
-export function closePollHandler(req: Request): Response {
-  const url = new URL(req.url);
-  const parts = url.pathname.split("/");
-  // /api/polls/admin/:adminId/close → adminId is at index parts.length - 2
-  const adminId = parts[parts.length - 2]!;
+export function closePollHandler(req: ParamsRequest<{ adminId: string }>): Response {
+  const adminId = req.params.adminId;
 
   const poll = getPollByAdminId.get(adminId);
   if (!poll) {
     return Response.json({ error: "Poll not found" }, { status: 404 });
   }
 
-  if (poll.expires_at && Date.now() > poll.expires_at) {
+  if (poll.expires_at && Date.now() >= poll.expires_at) {
     return Response.json({ error: "Poll is already closed" }, { status: 409 });
   }
 
@@ -323,20 +350,18 @@ export function closePollHandler(req: Request): Response {
 
   const { options, total_votes } = buildResults(poll.id);
 
-  // Broadcast closed state to all viewers
   const message: WsMessage = { type: "closed", options, total_votes };
   getServer().publish(`poll-${poll.share_id}`, JSON.stringify(message));
 
   return Response.json({
-    poll: updated,
+    poll: safePoll(updated),
     options,
     total_votes,
   });
 }
 
-export function deletePoll(req: Request): Response {
-  const url = new URL(req.url);
-  const adminId = url.pathname.split("/").pop()!;
+export function deletePoll(req: ParamsRequest<{ adminId: string }>): Response {
+  const adminId = req.params.adminId;
 
   const poll = getPollByAdminId.get(adminId);
   if (!poll) {
@@ -348,11 +373,8 @@ export function deletePoll(req: Request): Response {
   return Response.json({ deleted: true });
 }
 
-export function resetVotes(req: Request): Response {
-  const url = new URL(req.url);
-  const parts = url.pathname.split("/");
-  // /api/polls/admin/:adminId/reset → adminId is at index parts.length - 2
-  const adminId = parts[parts.length - 2]!;
+export function resetVotes(req: ParamsRequest<{ adminId: string }>): Response {
+  const adminId = req.params.adminId;
 
   const poll = getPollByAdminId.get(adminId);
   if (!poll) {
@@ -363,11 +385,10 @@ export function resetVotes(req: Request): Response {
 
   const { options, total_votes } = buildResults(poll.id);
 
-  // Broadcast zeroed results to all viewers
   broadcastResults(poll.id, poll.share_id);
 
   return Response.json({
-    poll,
+    poll: safePoll(poll),
     options,
     total_votes,
   });

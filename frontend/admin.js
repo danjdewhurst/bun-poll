@@ -41,6 +41,11 @@ function renderResults(options, totalVotes) {
   totalVotesEl.textContent = `${totalVotes} total vote${totalVotes !== 1 ? "s" : ""}`;
 }
 
+let wsReconnectDelay = 2000;
+const WS_MAX_DELAY = 30000;
+const WS_MAX_RETRIES = 20;
+let wsRetryCount = 0;
+
 function connectWs() {
   if (!shareId) return;
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -49,26 +54,38 @@ function connectWs() {
   ws.addEventListener("open", () => {
     wsDotEl.classList.remove("disconnected");
     wsTextEl.textContent = "Live";
+    wsReconnectDelay = 2000;
+    wsRetryCount = 0;
   });
 
   ws.addEventListener("message", (event) => {
-    const data = JSON.parse(event.data);
-    if (data.type === "results") {
-      renderResults(data.options, data.total_votes);
-    }
-    if (data.type === "closed") {
-      renderResults(data.options, data.total_votes);
-      markExpired();
-    }
-    if (data.type === "viewers") {
-      document.getElementById("viewer-count").textContent = data.count;
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === "results") {
+        renderResults(data.options, data.total_votes);
+      }
+      if (data.type === "closed") {
+        renderResults(data.options, data.total_votes);
+        markExpired();
+      }
+      if (data.type === "viewers") {
+        document.getElementById("viewer-count").textContent = data.count;
+      }
+    } catch {
+      // Ignore malformed messages
     }
   });
 
   ws.addEventListener("close", () => {
     wsDotEl.classList.add("disconnected");
+    if (wsRetryCount >= WS_MAX_RETRIES) {
+      wsTextEl.textContent = "Disconnected";
+      return;
+    }
     wsTextEl.textContent = "Reconnecting\u2026";
-    setTimeout(connectWs, 2000);
+    setTimeout(connectWs, wsReconnectDelay);
+    wsReconnectDelay = Math.min(wsReconnectDelay * 1.5, WS_MAX_DELAY);
+    wsRetryCount++;
   });
 }
 
@@ -134,15 +151,32 @@ function showToast(text) {
   toastTimer = setTimeout(() => copyToast.classList.remove("show"), 2000);
 }
 
-document.addEventListener("click", (e) => {
-  const box = e.target.closest("[data-copy]");
-  if (box) {
-    const text = box.querySelector(".link-text").textContent;
-    navigator.clipboard.writeText(text).then(() => {
+function handleCopy(box) {
+  const text = box.querySelector(".link-text").textContent;
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
       box.classList.add("copied");
       showToast();
       setTimeout(() => box.classList.remove("copied"), 2000);
+    })
+    .catch(() => {
+      showToast("Failed to copy \u2014 please copy manually");
     });
+}
+
+document.addEventListener("click", (e) => {
+  const box = e.target.closest("[data-copy]");
+  if (box) handleCopy(box);
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") {
+    const box = e.target.closest("[data-copy]");
+    if (box) {
+      e.preventDefault();
+      handleCopy(box);
+    }
   }
 });
 
@@ -170,9 +204,11 @@ function markExpired() {
   _pollExpired = true;
   const closeBtn = document.getElementById("btn-close");
   closeBtn.disabled = true;
-  // Add expired badge if not already present
   if (!questionEl.querySelector(".expired-badge")) {
-    questionEl.innerHTML += '<span class="expired-badge">Expired</span>';
+    const badge = document.createElement("span");
+    badge.className = "expired-badge";
+    badge.textContent = "Expired";
+    questionEl.appendChild(badge);
   }
 }
 

@@ -383,7 +383,12 @@ input[type="number"]:focus {
 }
 
 .toggle-row input[type="checkbox"] {
-  display: none;
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
 }
 
 .toggle-track::after {
@@ -445,6 +450,24 @@ input[type="number"]:focus {
 .vote-option:nth-child(5) {
   animation-delay: 0.25s;
 }
+.vote-option:nth-child(6) {
+  animation-delay: 0.3s;
+}
+.vote-option:nth-child(7) {
+  animation-delay: 0.35s;
+}
+.vote-option:nth-child(8) {
+  animation-delay: 0.4s;
+}
+.vote-option:nth-child(9) {
+  animation-delay: 0.45s;
+}
+.vote-option:nth-child(10) {
+  animation-delay: 0.5s;
+}
+.vote-option:nth-child(n + 11) {
+  animation-delay: 0.55s;
+}
 
 .vote-option:hover {
   border-color: var(--accent-solid);
@@ -453,7 +476,17 @@ input[type="number"]:focus {
 
 .vote-option input[type="radio"],
 .vote-option input[type="checkbox"] {
-  display: none;
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.vote-option:focus-within {
+  outline: 2px solid var(--accent-solid);
+  outline-offset: 2px;
 }
 
 .vote-option .custom-check {
@@ -530,6 +563,24 @@ input[type="number"]:focus {
 }
 .result-bar:nth-child(5) {
   animation-delay: 0.25s;
+}
+.result-bar:nth-child(6) {
+  animation-delay: 0.3s;
+}
+.result-bar:nth-child(7) {
+  animation-delay: 0.35s;
+}
+.result-bar:nth-child(8) {
+  animation-delay: 0.4s;
+}
+.result-bar:nth-child(9) {
+  animation-delay: 0.45s;
+}
+.result-bar:nth-child(10) {
+  animation-delay: 0.5s;
+}
+.result-bar:nth-child(n + 11) {
+  animation-delay: 0.55s;
 }
 
 .result-bar .label-row {

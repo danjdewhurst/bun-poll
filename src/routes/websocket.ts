@@ -1,22 +1,24 @@
 import type { ServerWebSocket } from "bun";
-
-export interface WsData {
-  shareId: string;
-}
+import { getPollByShareId } from "../db.ts";
+import type { WsData } from "../types.ts";
 
 const viewerCounts = new Map<string, number>();
 
-export function getViewerCount(shareId: string): number {
-  return viewerCounts.get(shareId) ?? 0;
-}
-
 function buildViewerMessage(shareId: string): string {
-  return JSON.stringify({ type: "viewers", count: getViewerCount(shareId) });
+  return JSON.stringify({ type: "viewers", count: viewerCounts.get(shareId) ?? 0 });
 }
 
 export const websocketHandlers = {
   open(ws: ServerWebSocket<WsData>) {
     const { shareId } = ws.data;
+
+    // Validate poll exists before subscribing
+    const poll = getPollByShareId.get(shareId);
+    if (!poll) {
+      ws.close(4004, "Poll not found");
+      return;
+    }
+
     const topic = `poll-${shareId}`;
 
     ws.subscribe(topic);

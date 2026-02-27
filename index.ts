@@ -56,6 +56,7 @@ const server = Bun.serve({
     const wsMatch = url.pathname.match(/^\/ws\/([a-f0-9]+)$/);
     if (wsMatch) {
       const upgraded = server.upgrade(req, {
+        // biome-ignore lint/style/noNonNullAssertion: regex capture group is guaranteed by match
         data: { shareId: wsMatch[1]! },
       });
       if (upgraded) return undefined;

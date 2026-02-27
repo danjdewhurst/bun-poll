@@ -39,6 +39,9 @@ db.run(`
   )
 `);
 
+db.run(`CREATE INDEX IF NOT EXISTS idx_votes_option_id ON votes(option_id)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_votes_poll_voter ON votes(poll_id, voter_token)`);
+
 export const insertPoll = db.prepare<
   { id: number; share_id: string; admin_id: string },
   [string, string, string, number, number | null, number]

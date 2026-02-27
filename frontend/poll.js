@@ -61,6 +61,11 @@ function showResults(options, totalVotes) {
   resultsSectionEl.classList.remove("hidden");
 }
 
+let wsReconnectDelay = 2000;
+const WS_MAX_DELAY = 30000;
+const WS_MAX_RETRIES = 20;
+let wsRetryCount = 0;
+
 function connectWs() {
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
   const ws = new WebSocket(`${protocol}//${location.host}/ws/${shareId}`);
@@ -68,22 +73,34 @@ function connectWs() {
   ws.addEventListener("open", () => {
     wsDotEl.classList.remove("disconnected");
     wsTextEl.textContent = "Live";
+    wsReconnectDelay = 2000;
+    wsRetryCount = 0;
   });
 
   ws.addEventListener("message", (event) => {
-    const data = JSON.parse(event.data);
-    if (data.type === "results") {
-      showResults(data.options, data.total_votes);
-    }
-    if (data.type === "viewers") {
-      document.getElementById("viewer-count").textContent = data.count;
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === "results") {
+        showResults(data.options, data.total_votes);
+      }
+      if (data.type === "viewers") {
+        document.getElementById("viewer-count").textContent = data.count;
+      }
+    } catch {
+      // Ignore malformed messages
     }
   });
 
   ws.addEventListener("close", () => {
     wsDotEl.classList.add("disconnected");
+    if (wsRetryCount >= WS_MAX_RETRIES) {
+      wsTextEl.textContent = "Disconnected";
+      return;
+    }
     wsTextEl.textContent = "Reconnecting\u2026";
-    setTimeout(connectWs, 2000);
+    setTimeout(connectWs, wsReconnectDelay);
+    wsReconnectDelay = Math.min(wsReconnectDelay * 1.5, WS_MAX_DELAY);
+    wsRetryCount++;
   });
 }
 
@@ -101,7 +118,10 @@ async function loadPoll() {
     questionEl.textContent = data.poll.question;
 
     if (data.poll.expires_at && Date.now() > data.poll.expires_at) {
-      questionEl.innerHTML += '<span class="expired-badge">Expired</span>';
+      const badge = document.createElement("span");
+      badge.className = "expired-badge";
+      badge.textContent = "Expired";
+      questionEl.appendChild(badge);
     }
 
     loadingEl.classList.add("hidden");

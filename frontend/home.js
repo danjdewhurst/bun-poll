@@ -37,7 +37,7 @@ addOptionBtn.addEventListener("click", () => {
   row.innerHTML = `
     <span class="option-number">${optionCount}</span>
     <input type="text" name="option" placeholder="Option ${optionCount}" required maxlength="${MAX_OPTION_LENGTH}">
-    <button type="button" class="btn btn-remove remove-option">&times;</button>
+    <button type="button" class="btn btn-remove remove-option" aria-label="Remove option">&times;</button>
   `;
   optionsList.appendChild(row);
   row.querySelector("input").focus();
@@ -143,14 +143,31 @@ function showToast(text) {
   toastTimer = setTimeout(() => copyToast.classList.remove("show"), 2000);
 }
 
-document.addEventListener("click", (e) => {
-  const box = e.target.closest("[data-copy]");
-  if (box) {
-    const text = box.querySelector(".link-text").textContent;
-    navigator.clipboard.writeText(text).then(() => {
+function handleCopy(box) {
+  const text = box.querySelector(".link-text").textContent;
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
       box.classList.add("copied");
       showToast();
       setTimeout(() => box.classList.remove("copied"), 2000);
+    })
+    .catch(() => {
+      showToast("Failed to copy \u2014 please copy manually");
     });
+}
+
+document.addEventListener("click", (e) => {
+  const box = e.target.closest("[data-copy]");
+  if (box) handleCopy(box);
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") {
+    const box = e.target.closest("[data-copy]");
+    if (box) {
+      e.preventDefault();
+      handleCopy(box);
+    }
   }
 });

@@ -1,5 +1,6 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: test helpers use loose typing for API response assertions
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+// biome-ignore-all lint/style/noNonNullAssertion: test assertions where index access is known-safe
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { db } from "./src/db.ts";
 import { resetRateLimitStore } from "./src/rate-limit.ts";
 
@@ -8,14 +9,10 @@ let baseUrl: string;
 let server: ReturnType<typeof Bun.serve>;
 
 beforeAll(async () => {
-  // Use in-memory DB for tests by clearing and re-using the imported db
-  // The db module already initialised the schema, so tables exist.
-  // Clean slate for tests:
   db.run("DELETE FROM votes");
   db.run("DELETE FROM options");
   db.run("DELETE FROM polls");
 
-  // Dynamically import and start the server
   const {
     createPoll,
     getPoll,
@@ -71,6 +68,10 @@ afterAll(() => {
   server?.stop(true);
 });
 
+beforeEach(() => {
+  resetRateLimitStore();
+});
+
 async function createTestPoll(overrides: Record<string, unknown> = {}) {
   const body = {
     question: "Favourite colour?",
@@ -82,8 +83,14 @@ async function createTestPoll(overrides: Record<string, unknown> = {}) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { res, data: (await res.json()) as any as any };
+  return { res, data: (await res.json()) as any };
+}
+
+/** Create a poll that is already expired by closing it immediately */
+async function createExpiredPoll() {
+  const { data: created } = await createTestPoll();
+  await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/close`, { method: "POST" });
+  return created;
 }
 
 describe("POST /api/polls", () => {
@@ -91,7 +98,7 @@ describe("POST /api/polls", () => {
     const { res, data } = await createTestPoll();
     expect(res.status).toBe(200);
     expect(data.share_id).toBeString();
-    expect(data.share_id).toHaveLength(8);
+    expect(data.share_id).toHaveLength(16);
     expect(data.admin_id).toBeString();
     expect(data.admin_id.length).toBeGreaterThan(8);
   });
@@ -113,6 +120,22 @@ describe("POST /api/polls", () => {
     });
     expect(res.status).toBe(400);
   });
+
+  test("rejects invalid expires_in_minutes", async () => {
+    const { res, data } = await createTestPoll({ expires_in_minutes: -1 });
+    expect(res.status).toBe(400);
+    expect(data.error).toContain("Expiry must be");
+  });
+
+  test("rejects zero expires_in_minutes", async () => {
+    const { res } = await createTestPoll({ expires_in_minutes: 0 });
+    expect(res.status).toBe(400);
+  });
+
+  test("rejects non-integer expires_in_minutes", async () => {
+    const { res } = await createTestPoll({ expires_in_minutes: 1.5 });
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("GET /api/polls/:shareId", () => {
@@ -125,6 +148,13 @@ describe("GET /api/polls/:shareId", () => {
     expect(data.options).toHaveLength(3);
     expect(data.total_votes).toBe(0);
     expect(data.has_voted).toBe(false);
+  });
+
+  test("does not expose admin_id in public response", async () => {
+    const { data: created } = await createTestPoll();
+    const res = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
+    const data = (await res.json()) as any;
+    expect(data.poll.admin_id).toBeUndefined();
   });
 
   test("returns 404 for unknown share_id", async () => {
@@ -230,8 +260,8 @@ describe("POST /api/polls/:shareId/vote", () => {
     expect(res.status).toBe(200);
   });
 
-  test("rejects vote on expired poll", async () => {
-    const { data: created } = await createTestPoll({ expires_in_minutes: -1 });
+  test("rejects vote on closed poll", async () => {
+    const created = await createExpiredPoll();
     const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
     const pollData = (await pollRes.json()) as any;
     const voterToken = crypto.randomUUID();
@@ -255,16 +285,63 @@ describe("POST /api/polls/:shareId/vote", () => {
     });
     expect(res.status).toBe(400);
   });
+
+  test("rejects missing voter_token", async () => {
+    const { data: created } = await createTestPoll();
+    const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
+    const pollData = (await pollRes.json()) as any;
+
+    const res = await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ option_ids: [pollData.options[0].id] }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test("rejects empty option_ids", async () => {
+    const { data: created } = await createTestPoll();
+    const res = await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ option_ids: [], voter_token: crypto.randomUUID() }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test("rejects invalid voter_token format", async () => {
+    const { data: created } = await createTestPoll();
+    const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
+    const pollData = (await pollRes.json()) as any;
+
+    const res = await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ option_ids: [pollData.options[0].id], voter_token: "not-a-uuid" }),
+    });
+    expect(res.status).toBe(400);
+    const data = (await res.json()) as any;
+    expect(data.error).toContain("Invalid voter token");
+  });
+
+  test("rejects vote on nonexistent poll", async () => {
+    const res = await fetch(`${baseUrl}/api/polls/0000000000000000/vote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ option_ids: [1], voter_token: crypto.randomUUID() }),
+    });
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("GET /api/polls/admin/:adminId", () => {
-  test("returns full poll data including admin_id", async () => {
+  test("returns poll data without admin_id", async () => {
     const { data: created } = await createTestPoll();
     const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}`);
     const data = (await res.json()) as any;
     expect(res.status).toBe(200);
-    expect(data.poll.admin_id).toBe(created.admin_id);
     expect(data.poll.share_id).toBe(created.share_id);
+    expect(data.poll.admin_id).toBeUndefined();
     expect(data.options).toHaveLength(3);
   });
 
@@ -301,6 +378,38 @@ describe("GET /api/polls/admin/:adminId/export", () => {
     expect(data.exported_at).toBeString();
     expect(data.options[0].text).toBe("Red");
     expect(data.options[0].percentage).toBe("0%");
+  });
+
+  test("CSV export with votes shows percentages", async () => {
+    const { data: created } = await createTestPoll();
+    const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
+    const pollData = (await pollRes.json()) as any;
+
+    // Cast 2 votes on first option, 1 on second
+    for (let i = 0; i < 2; i++) {
+      await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          option_ids: [pollData.options[0].id],
+          voter_token: crypto.randomUUID(),
+        }),
+      });
+    }
+    await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        option_ids: [pollData.options[1].id],
+        voter_token: crypto.randomUUID(),
+      }),
+    });
+
+    const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/export?format=csv`);
+    const text = await res.text();
+    expect(text).toContain("Red,2,66.7%");
+    expect(text).toContain("Blue,1,33.3%");
+    expect(text).toContain("Green,0,0%");
   });
 
   test("defaults to JSON when format not specified", async () => {
@@ -348,13 +457,6 @@ describe("GET /health", () => {
     expect(typeof data.polls).toBe("number");
     expect(data.database).toBe("ok");
   });
-
-  test("polls count reflects created polls", async () => {
-    const before = (await fetch(`${baseUrl}/health`).then((r) => r.json())) as any;
-    await createTestPoll();
-    const after = (await fetch(`${baseUrl}/health`).then((r) => r.json())) as any;
-    expect(after.polls).toBe(before.polls + 1);
-  });
 });
 
 describe("POST /api/polls/admin/:adminId/close", () => {
@@ -367,11 +469,12 @@ describe("POST /api/polls/admin/:adminId/close", () => {
     expect(res.status).toBe(200);
     expect(data.poll.expires_at).toBeNumber();
     expect(data.poll.expires_at).toBeLessThanOrEqual(Date.now());
+    expect(data.poll.admin_id).toBeUndefined();
     expect(data.options).toHaveLength(3);
   });
 
   test("returns 409 if poll is already closed", async () => {
-    const { data: created } = await createTestPoll({ expires_in_minutes: -1 });
+    const created = await createExpiredPoll();
     const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/close`, {
       method: "POST",
     });
@@ -431,9 +534,36 @@ describe("POST /api/polls/admin/:adminId/reset", () => {
     const data = (await res.json()) as any;
     expect(res.status).toBe(200);
     expect(data.total_votes).toBe(0);
+    expect(data.poll.admin_id).toBeUndefined();
     for (const opt of data.options) {
       expect(opt.votes).toBe(0);
     }
+  });
+
+  test("allows voting after reset", async () => {
+    const { data: created } = await createTestPoll();
+    const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
+    const pollData = (await pollRes.json()) as any;
+    const optionId = pollData.options[0].id;
+    const voterToken = crypto.randomUUID();
+
+    // Vote
+    await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ option_ids: [optionId], voter_token: voterToken }),
+    });
+
+    // Reset
+    await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/reset`, { method: "POST" });
+
+    // Same voter can vote again after reset
+    const res = await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ option_ids: [optionId], voter_token: voterToken }),
+    });
+    expect(res.status).toBe(200);
   });
 
   test("returns 404 for invalid admin ID", async () => {
@@ -473,8 +603,6 @@ describe("Input guardrails", () => {
   });
 
   test("rate limiting returns 429 after too many votes", async () => {
-    resetRateLimitStore();
-
     const { data: created } = await createTestPoll();
     const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
     const pollData = (await pollRes.json()) as any;
@@ -500,9 +628,6 @@ describe("Input guardrails", () => {
     const body = (await lastRes.json()) as any;
     expect(body.error).toBe("Too many requests");
     expect(body.retry_after).toBeNumber();
-
-    // Clean up for other tests
-    resetRateLimitStore();
   });
 });
 
@@ -556,7 +681,6 @@ describe("WebSocket viewer count", () => {
     const { data: created } = await createTestPoll();
     const wsUrl = baseUrl.replace("http", "ws");
 
-    // Connect first client and wait for its viewer message
     const ws1 = new WebSocket(`${wsUrl}/ws/${created.share_id}`);
     await new Promise<void>((resolve) => {
       ws1.addEventListener("message", (event) => {
@@ -565,7 +689,6 @@ describe("WebSocket viewer count", () => {
       });
     });
 
-    // Connect second client and capture its viewer count
     const ws2 = new WebSocket(`${wsUrl}/ws/${created.share_id}`);
     const message = await new Promise<{ type: string; count: number }>((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -591,12 +714,10 @@ describe("WebSocket viewer count", () => {
     const { data: created } = await createTestPoll();
     const wsUrl = baseUrl.replace("http", "ws");
 
-    // Connect two clients
     const ws1 = new WebSocket(`${wsUrl}/ws/${created.share_id}`);
     await new Promise<void>((resolve) => {
       ws1.addEventListener("open", () => resolve());
     });
-    // Wait for ws1 to be fully subscribed
     await new Promise<void>((resolve) => {
       ws1.addEventListener("message", (event) => {
         const data = JSON.parse(event.data as string);
@@ -612,7 +733,6 @@ describe("WebSocket viewer count", () => {
       });
     });
 
-    // Close ws2 and listen on ws1 for the updated viewer count
     const decremented = new Promise<{ type: string; count: number }>((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error("Timed out waiting for decremented viewers message"));

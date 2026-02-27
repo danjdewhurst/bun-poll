@@ -50,3 +50,7 @@ export type WsMessage =
   | { type: "results"; options: OptionResult[]; total_votes: number }
   | { type: "closed"; options: OptionResult[]; total_votes: number }
   | { type: "viewers"; count: number };
+
+export interface WsData {
+  shareId: string;
+}
