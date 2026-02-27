@@ -994,6 +994,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 
 .card:has(.share-actions) {
   overflow: visible;
+  z-index: 10;
+  position: relative;
 }
 
 .share-btn {
