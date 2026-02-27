@@ -41,12 +41,14 @@ Most poll tools are over-engineered SaaS products or require a dozen packages ju
 | 🔗 | **Shareable links** | Unique short URLs for voting, separate admin links for managing |
 | ☑️ | **Single & multiple choice** | Configurable per poll |
 | ⏱️ | **Poll expiry** | Optional time limit on voting |
-| 🛡️ | **Vote deduplication** | One vote per browser, enforced client-side and at the database level |
+| 📅 | **Scheduled polls** | Set a future start time so voting opens automatically |
+| 🛡️ | **Vote deduplication** | One vote per browser and IP, enforced client-side and at the database level |
 | 📤 | **Results export** | Download results as CSV or JSON, or copy a plain-text summary |
 | 🔧 | **Poll management** | Close voting early, reset votes, or delete polls from the admin page |
 | 🛡️ | **Input guardrails** | Length limits, rate limiting on votes, and Content-Security-Policy headers |
 | 💾 | **SQLite persistence** | WAL mode, zero external services |
 | 🎛️ | **Feature flags** | Toggle exports, WebSockets, or admin actions on/off via environment variables |
+| 🖼️ | **Embeddable polls** | Compact `<iframe>` embed mode for blogs and docs via `/embed/:shareId` |
 | 🪶 | **Vanilla frontend** | No build step, no framework — just HTML/CSS/JS via Bun's HTML imports |
 
 ---
@@ -94,6 +96,7 @@ frontend/
   home.html / home.js         Poll creation page
   poll.html / poll.js         Voting & live results page
   admin.html / admin.js       Admin results & share link page
+  embed.html / embed.js / embed.css  Compact embeddable poll view
   styles.css                  Shared styles
 index.test.ts                 Integration tests
 ```
@@ -129,7 +132,7 @@ FEATURE_EXPORTS=false FEATURE_ADMIN_MANAGEMENT=false bun --hot index.ts
 bun test
 ```
 
-Covers poll creation, voting, deduplication, expiry, multi-choice validation, and page rendering.
+Covers poll creation, voting, deduplication (token + IP), expiry, scheduled polls, multi-choice validation, embeds, and page rendering.
 
 ---
 

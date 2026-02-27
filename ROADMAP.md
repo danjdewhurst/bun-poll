@@ -17,10 +17,6 @@ _Nothing here right now — suggest something!_
 - **Open-ended** — free-text responses alongside fixed options
 - **Image options** — option cards with uploaded or linked images
 
-### Embed Mode
-- Compact `<iframe>` embed for blogs and docs
-- `/embed/:shareId` route with minimal chrome and a query param API for styling
-
 ### Admin Authentication
 - Optional password protection on the admin page
 - One-time magic link sent to the creator's email (if provided)
@@ -108,6 +104,11 @@ _Nothing here right now — suggest something!_
 - `GET /api/features` endpoint for frontend discovery of enabled features
 - Disabled features return 403 from the API and hide their UI sections automatically
 - All features enabled by default (opt-out model)
+
+### Embed Mode
+- Compact `<iframe>` embed via `/embed/:shareId` with minimal chrome
+- Standalone styles in `embed.css` — no shared stylesheet dependency
+- Works in any `<iframe>` on blogs, docs, or external sites
 
 ### Improved Voter Integrity (IP Fingerprint)
 - Vote dedup combines localStorage token with voter IP address

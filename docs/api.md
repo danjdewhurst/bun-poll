@@ -18,6 +18,7 @@ All endpoints return JSON. The server runs on `PORT` (default `3000`).
 | `options` | string[] | Yes | 2–20 option labels (each non-empty after trim, max 200 characters) |
 | `allow_multiple` | boolean | No | Allow voters to select more than one option (default `false`) |
 | `expires_in_minutes` | number | No | Minutes until voting closes (omit for no expiry) |
+| `starts_at` | string | No | ISO 8601 date-time when voting opens (omit to start immediately) |
 
 **Example:**
 
@@ -29,6 +30,7 @@ curl -X POST http://localhost:3000/api/polls \
     "options": ["TypeScript", "Rust", "Go"],
     "allow_multiple": false,
     "expires_in_minutes": 60
+    # Optional: "starts_at": "2026-03-01T09:00:00Z"
   }'
 ```
 
@@ -49,6 +51,7 @@ curl -X POST http://localhost:3000/api/polls \
 | Status | Reason |
 |---|---|
 | `400` | Empty question, question exceeds 500 characters, fewer than 2 options, more than 20 options, empty option string, or option exceeds 200 characters |
+| `400` | Invalid `starts_at` date, `starts_at` is in the past, or `starts_at` is not before `expires_at` |
 | `500` | Database insert failure |
 
 ---
@@ -72,6 +75,7 @@ curl -X POST http://localhost:3000/api/polls \
     "share_id": "a1b2c3d4",
     "question": "Favourite language?",
     "allow_multiple": 0,
+    "starts_at": null,
     "expires_at": 1700003600000,
     "created_at": 1700000000000
   },
@@ -104,7 +108,7 @@ Note: `admin_id` is deliberately excluded from this response.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `option_ids` | number[] | Yes | IDs of chosen options (one for single-choice, one or more for multi-choice) |
-| `voter_token` | string | Yes | Unique identifier for the voter (typically a UUID stored in the browser) |
+| `voter_token` | string | Yes | Unique identifier for the voter (typically a UUID stored in the browser). The voter's IP address is also recorded and checked server-side as secondary deduplication. |
 
 **Response (`200`):**
 
@@ -126,7 +130,8 @@ A successful vote also triggers a WebSocket broadcast to all connected clients o
 |---|---|
 | `400` | Missing `voter_token`, empty `option_ids`, multiple options on a single-choice poll, or invalid option ID |
 | `404` | Poll not found |
-| `409` | Voter has already voted on this poll |
+| `403` | Poll has not started yet (scheduled poll whose `starts_at` is in the future) |
+| `409` | Voter has already voted on this poll (matched by token or IP address) |
 | `410` | Poll has expired |
 | `429` | Rate limited — too many votes from this IP (max 10 per 60-second window). Response includes `retry_after` (seconds) and a `Retry-After` header |
 
@@ -148,6 +153,7 @@ Returns the full poll data including the `admin_id`. No `has_voted` field is inc
     "admin_id": "550e8400-e29b-41d4-a716-446655440000",
     "question": "Favourite language?",
     "allow_multiple": 0,
+    "starts_at": null,
     "expires_at": null,
     "created_at": 1700000000000
   },
@@ -256,6 +262,7 @@ Immediately closes voting by setting `expires_at` to the current timestamp. Broa
     "admin_id": "550e8400-e29b-41d4-a716-446655440000",
     "question": "Favourite language?",
     "allow_multiple": 0,
+    "starts_at": null,
     "expires_at": 1700000000000,
     "created_at": 1700000000000
   },
@@ -318,6 +325,24 @@ Deletes all votes for the poll while keeping the poll and its options intact. Br
 | Status | Reason |
 |---|---|
 | `404` | Poll not found |
+
+---
+
+## Embed Page
+
+### Embeddable Poll View
+
+`GET /embed/:shareId`
+
+Serves a compact, standalone HTML page designed for `<iframe>` embedding. The embed page renders the poll question, options, and live results with minimal chrome and its own stylesheet (`embed.css`).
+
+**Usage:**
+
+```html
+<iframe src="http://localhost:3000/embed/a1b2c3d4" width="400" height="300" frameborder="0"></iframe>
+```
+
+This is an HTML route — it returns an HTML page, not JSON.
 
 ---
 

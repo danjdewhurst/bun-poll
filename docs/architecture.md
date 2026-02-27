@@ -36,6 +36,7 @@ frontend/
   home.html / home.js         Poll creation page
   poll.html / poll.js         Voting and live results page
   admin.html / admin.js       Admin results and share link page
+  embed.html / embed.js / embed.css  Compact embeddable poll view
   styles.css                  Shared stylesheet
 ```
 
@@ -44,7 +45,7 @@ frontend/
 ## Request Flow
 
 1. `Bun.serve()` in `index.ts` matches incoming requests against named routes
-2. HTML routes (`/`, `/poll/:shareId`, `/admin/:adminId`) serve bundled HTML files directly via Bun's HTML imports
+2. HTML routes (`/`, `/poll/:shareId`, `/admin/:adminId`, `/embed/:shareId`) serve bundled HTML files directly via Bun's HTML imports
 3. API routes (`/api/polls/*`) delegate to handler functions in `src/routes/polls.ts` (including export, summary, close, reset, and delete endpoints under `/api/polls/admin/:adminId/`)
 4. The `fetch` fallback handles WebSocket upgrades on `/ws/:shareId` and returns 404 for everything else
 5. After a successful vote, the handler calls `server.publish()` to broadcast updated results to all WebSocket subscribers on that poll's topic
@@ -66,6 +67,7 @@ SQLite with WAL (write-ahead logging) mode for concurrent read performance. Fore
 | `admin_id` | TEXT | UUID v4, unique — used in admin URLs |
 | `question` | TEXT | The poll question |
 | `allow_multiple` | INTEGER | 0 = single choice, 1 = multiple choice |
+| `starts_at` | INTEGER | Unix ms timestamp, nullable — voting blocked before this time |
 | `expires_at` | INTEGER | Unix ms timestamp, nullable |
 | `created_at` | INTEGER | Unix ms timestamp |
 
@@ -86,7 +88,10 @@ SQLite with WAL (write-ahead logging) mode for concurrent read performance. Fore
 | `poll_id` | INTEGER | Foreign key to polls, cascade delete |
 | `option_id` | INTEGER | Foreign key to options, cascade delete |
 | `voter_token` | TEXT | Client-generated UUID |
+| `voter_ip` | TEXT | Voter's IP address (default empty string) |
 | `created_at` | INTEGER | Unix ms timestamp |
+
+An index `idx_votes_poll_ip` on `(poll_id, voter_ip)` supports fast IP-based dedup lookups.
 
 A `UNIQUE(poll_id, option_id, voter_token)` constraint prevents the same voter from casting duplicate votes on the same option. `INSERT OR IGNORE` provides a database-level backstop.
 
@@ -142,6 +147,7 @@ Each page is a standalone HTML file that imports its own JS. Bun's HTML imports 
 | `/` | `home.html` | `home.js` | Create a poll |
 | `/poll/:shareId` | `poll.html` | `poll.js` | Vote and view live results |
 | `/admin/:adminId` | `admin.html` | `admin.js` | Admin dashboard with share link |
+| `/embed/:shareId` | `embed.html` | `embed.js` | Compact embeddable poll view |
 
 ### Shared Styles
 
@@ -155,6 +161,8 @@ Each page is a standalone HTML file that imports its own JS. Bun's HTML imports 
 ### Voter Token
 
 Each browser generates a UUID per poll (`voter_token_<shareId>` in localStorage). This token is sent with votes and used to check `has_voted` status. It's a client-side deduplication mechanism backed by the database-level unique constraint.
+
+The server also records the voter's IP address and checks it as a secondary deduplication layer. A vote is blocked if either the token or the IP has already voted on that poll. Existing votes from before the IP migration (with an empty IP field) are not matched.
 
 ---
 

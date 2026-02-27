@@ -35,6 +35,9 @@ Before each run, the `beforeAll` hook clears all tables (`votes`, `options`, `po
 | Creates a poll | Returns 200 with 8-char `share_id` and UUID `admin_id` |
 | Rejects empty question | Returns 400 |
 | Rejects fewer than 2 options | Returns 400 |
+| Rejects invalid `starts_at` | Returns 400 |
+| Rejects `starts_at` in the past | Returns 400 |
+| Rejects `starts_at` >= `expires_at` | Returns 400 |
 
 ### `GET /api/polls/:shareId` — Poll Retrieval
 
@@ -52,6 +55,8 @@ Before each run, the `beforeAll` hook clears all tables (`votes`, `options`, `po
 | Duplicate vote | Returns 409 |
 | Multiple options on single-choice | Returns 400 |
 | Multiple options on multi-choice | Returns 200 |
+| Vote on not-started poll | Returns 403 |
+| Duplicate vote (same IP) | Returns 409 |
 | Expired poll | Returns 410 |
 | Invalid option ID | Returns 400 |
 
@@ -114,6 +119,22 @@ Before each run, the `beforeAll` hook clears all tables (`votes`, `options`, `po
 | Home page loads | 200, contains "Create a Poll" |
 | Poll page loads | 200 for valid share_id |
 | Admin page loads | 200 for valid admin_id |
+| Embed page loads | 200 for valid share_id |
+
+### Scheduled Polls
+
+| Test | Assertion |
+|---|---|
+| Creates poll with valid `starts_at` | 200, poll created with `starts_at` set |
+| Voting blocked before start time | 403 with "Poll has not started yet" |
+| Voting allowed after start time | 200, vote recorded normally |
+
+### Voter Integrity — IP Deduplication
+
+| Test | Assertion |
+|---|---|
+| Same IP blocked on second vote | 409, duplicate detected by IP |
+| Different IP allowed | 200, vote recorded |
 
 ---
 
@@ -128,4 +149,4 @@ Before each run, the `beforeAll` hook clears all tables (`votes`, `options`, `po
 }
 ```
 
-Pass overrides to customise: `createTestPoll({ allow_multiple: true })` or `createTestPoll({ expires_in_minutes: -1 })` for an already-expired poll.
+Pass overrides to customise: `createTestPoll({ allow_multiple: true })`, `createTestPoll({ expires_in_minutes: -1 })` for an already-expired poll, or `createTestPoll({ starts_at: "2099-01-01T00:00:00Z" })` for a future-scheduled poll.

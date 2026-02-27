@@ -88,12 +88,22 @@ Configuration lives in `biome.json` at the project root.
 
 1. Open `http://localhost:3000` in your browser
 2. Enter a question and at least two options
-3. Optionally enable multiple choice and/or set an expiry time
+3. Optionally enable multiple choice, set an expiry time, or schedule a future start time
 4. Click **Create Poll**
 5. Share the **voting link** with participants
 6. Keep the **admin link** private — it gives access to the admin dashboard
 
 Voters see live results after casting their vote. The admin dashboard shows real-time results as votes come in via WebSocket.
+
+### Embedding a Poll
+
+You can embed any poll in an external page using an `<iframe>`:
+
+```html
+<iframe src="http://localhost:3000/embed/<shareId>" width="400" height="300" frameborder="0"></iframe>
+```
+
+The embed page shows a compact view with minimal chrome, suitable for blogs and documentation.
 
 ---
 
