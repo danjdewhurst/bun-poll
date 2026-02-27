@@ -283,6 +283,29 @@ input[type="number"]:focus {
   background: var(--border);
 }
 
+.btn-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid rgba(229, 83, 75, 0.2);
+}
+
+.btn-danger:hover {
+  background: var(--danger);
+  color: var(--text);
+  border-color: var(--danger);
+}
+
+.btn-danger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-danger:disabled:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: rgba(229, 83, 75, 0.2);
+}
+
 .btn-remove {
   width: 28px;
   height: 28px;

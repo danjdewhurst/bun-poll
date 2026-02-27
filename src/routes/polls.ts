@@ -8,6 +8,9 @@ import {
   hasVoted,
   getTotalVotes,
   getOptionIdsByPollId,
+  closePollStmt,
+  deletePollStmt,
+  resetVotesStmt,
 } from "../db.ts";
 import { getServer } from "../server-ref.ts";
 import type { CreatePollRequest, VoteRequest, WsMessage } from "../types.ts";
@@ -273,5 +276,79 @@ export function summaryPoll(req: Request): Response {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
     },
+  });
+}
+
+export function closePollHandler(req: Request): Response {
+  const url = new URL(req.url);
+  const parts = url.pathname.split("/");
+  // /api/polls/admin/:adminId/close → adminId is at index parts.length - 2
+  const adminId = parts[parts.length - 2]!;
+
+  const poll = getPollByAdminId.get(adminId);
+  if (!poll) {
+    return Response.json({ error: "Poll not found" }, { status: 404 });
+  }
+
+  if (poll.expires_at && Date.now() > poll.expires_at) {
+    return Response.json({ error: "Poll is already closed" }, { status: 409 });
+  }
+
+  const now = Date.now();
+  const updated = closePollStmt.get(now, adminId);
+
+  if (!updated) {
+    return Response.json({ error: "Failed to close poll" }, { status: 500 });
+  }
+
+  const { options, total_votes } = buildResults(poll.id);
+
+  // Broadcast closed state to all viewers
+  const message: WsMessage = { type: "closed", options, total_votes };
+  getServer().publish(`poll-${poll.share_id}`, JSON.stringify(message));
+
+  return Response.json({
+    poll: updated,
+    options,
+    total_votes,
+  });
+}
+
+export function deletePoll(req: Request): Response {
+  const url = new URL(req.url);
+  const adminId = url.pathname.split("/").pop()!;
+
+  const poll = getPollByAdminId.get(adminId);
+  if (!poll) {
+    return Response.json({ error: "Poll not found" }, { status: 404 });
+  }
+
+  deletePollStmt.run(adminId);
+
+  return Response.json({ deleted: true });
+}
+
+export function resetVotes(req: Request): Response {
+  const url = new URL(req.url);
+  const parts = url.pathname.split("/");
+  // /api/polls/admin/:adminId/reset → adminId is at index parts.length - 2
+  const adminId = parts[parts.length - 2]!;
+
+  const poll = getPollByAdminId.get(adminId);
+  if (!poll) {
+    return Response.json({ error: "Poll not found" }, { status: 404 });
+  }
+
+  resetVotesStmt.run(poll.id);
+
+  const { options, total_votes } = buildResults(poll.id);
+
+  // Broadcast zeroed results to all viewers
+  broadcastResults(poll.id, poll.share_id);
+
+  return Response.json({
+    poll,
+    options,
+    total_votes,
   });
 }

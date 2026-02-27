@@ -78,6 +78,28 @@ Before each run, the `beforeAll` hook clears all tables (`votes`, `options`, `po
 | Returns plain text summary | 200, `Content-Type: text/plain`, contains question, options with votes, and total |
 | Unknown admin_id | Returns 404 |
 
+### `POST /api/polls/admin/:adminId/close` — Close Poll
+
+| Test | Assertion |
+|---|---|
+| Closes a poll | 200, `expires_at` set to current timestamp |
+| Already closed poll | Returns 409 with "Poll is already closed" |
+| Unknown admin_id | Returns 404 |
+
+### `DELETE /api/polls/admin/:adminId` — Delete Poll
+
+| Test | Assertion |
+|---|---|
+| Deletes a poll | 200, `deleted: true`, poll no longer accessible via GET |
+| Unknown admin_id | Returns 404 |
+
+### `POST /api/polls/admin/:adminId/reset` — Reset Votes
+
+| Test | Assertion |
+|---|---|
+| Resets votes | 200, all options have 0 votes, `total_votes: 0` |
+| Unknown admin_id | Returns 404 |
+
 ### `GET /health` — Health Check
 
 | Test | Assertion |

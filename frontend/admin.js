@@ -11,6 +11,7 @@ const shareLinkEl = document.getElementById("share-link");
 const copyToast = document.getElementById("copy-toast");
 
 let shareId = null;
+let pollExpired = false;
 
 function escapeHtml(str) {
   const div = document.createElement("div");
@@ -55,6 +56,10 @@ function connectWs() {
     if (data.type === "results") {
       renderResults(data.options, data.total_votes);
     }
+    if (data.type === "closed") {
+      renderResults(data.options, data.total_votes);
+      markExpired();
+    }
   });
 
   ws.addEventListener("close", () => {
@@ -89,7 +94,7 @@ async function loadAdmin() {
     questionEl.textContent = data.poll.question;
 
     if (data.poll.expires_at && Date.now() > data.poll.expires_at) {
-      questionEl.innerHTML += '<span class="expired-badge">Expired</span>';
+      markExpired();
     }
 
     const origin = window.location.origin;
@@ -155,6 +160,64 @@ document.getElementById("btn-summary").addEventListener("click", async () => {
     showToast("Summary copied to clipboard");
   } catch {
     showToast("Failed to copy summary");
+  }
+});
+
+function markExpired() {
+  pollExpired = true;
+  const closeBtn = document.getElementById("btn-close");
+  closeBtn.disabled = true;
+  // Add expired badge if not already present
+  if (!questionEl.querySelector(".expired-badge")) {
+    questionEl.innerHTML += '<span class="expired-badge">Expired</span>';
+  }
+}
+
+document.getElementById("btn-close").addEventListener("click", async () => {
+  if (!confirm("Are you sure you want to close voting? This cannot be undone.")) return;
+  try {
+    const res = await fetch(`/api/polls/admin/${adminId}/close`, { method: "POST" });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Failed to close poll");
+    }
+    const data = await res.json();
+    renderResults(data.options, data.total_votes);
+    markExpired();
+    document.getElementById("expires-at").textContent = formatDate(data.poll.expires_at);
+    showToast("Voting closed");
+  } catch (err) {
+    showToast(err.message);
+  }
+});
+
+document.getElementById("btn-reset").addEventListener("click", async () => {
+  if (!confirm("Are you sure you want to reset all votes? This cannot be undone.")) return;
+  try {
+    const res = await fetch(`/api/polls/admin/${adminId}/reset`, { method: "POST" });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Failed to reset votes");
+    }
+    const data = await res.json();
+    renderResults(data.options, data.total_votes);
+    showToast("Votes reset");
+  } catch (err) {
+    showToast(err.message);
+  }
+});
+
+document.getElementById("btn-delete").addEventListener("click", async () => {
+  if (!confirm("Are you sure you want to delete this poll? This cannot be undone.")) return;
+  try {
+    const res = await fetch(`/api/polls/admin/${adminId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Failed to delete poll");
+    }
+    window.location.href = "/";
+  } catch (err) {
+    showToast(err.message);
   }
 });
 

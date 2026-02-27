@@ -47,7 +47,7 @@ export interface VoteRequest {
 }
 
 export interface WsMessage {
-  type: "results";
+  type: "results" | "closed";
   options: OptionResult[];
   total_votes: number;
 }

@@ -6,11 +6,6 @@ Ideas and planned improvements for bun-poll. Contributions welcome — pick anyt
 
 ## Near Term
 
-### Poll Management
-- Admin can close voting early
-- Admin can delete a poll entirely
-- Admin can reset votes and start fresh
-
 ### Code Quality
 - Set up Biome for linting and formatting
 - Add GitHub Actions workflow to run tests and checks on PRs into main
@@ -86,6 +81,12 @@ Ideas and planned improvements for bun-poll. Contributions welcome — pick anyt
 ---
 
 ## Done
+
+### Poll Management
+- Admin can close voting early via `POST /api/polls/admin/:adminId/close`
+- Admin can delete a poll entirely via `DELETE /api/polls/admin/:adminId`
+- Admin can reset votes and start fresh via `POST /api/polls/admin/:adminId/reset`
+- Management card on the admin page with confirmation dialogs
 
 ### Results Export
 - Download results as CSV or JSON from the admin page

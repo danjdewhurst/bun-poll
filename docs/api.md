@@ -239,6 +239,87 @@ Headers: `Content-Type: text/plain`
 
 ---
 
+### Close a Poll
+
+`POST /api/polls/admin/:adminId/close`
+
+Immediately closes voting by setting `expires_at` to the current timestamp. Broadcasts a WebSocket message to all viewers.
+
+**Response (`200`):**
+
+```json
+{
+  "poll": {
+    "id": 1,
+    "share_id": "a1b2c3d4",
+    "admin_id": "550e8400-e29b-41d4-a716-446655440000",
+    "question": "Favourite language?",
+    "allow_multiple": 0,
+    "expires_at": 1700000000000,
+    "created_at": 1700000000000
+  },
+  "options": [...],
+  "total_votes": 5
+}
+```
+
+**Errors:**
+
+| Status | Reason |
+|---|---|
+| `404` | Poll not found |
+| `409` | Poll is already closed |
+
+---
+
+### Delete a Poll
+
+`DELETE /api/polls/admin/:adminId`
+
+Permanently deletes the poll and all associated options and votes (via CASCADE).
+
+**Response (`200`):**
+
+```json
+{
+  "deleted": true
+}
+```
+
+**Errors:**
+
+| Status | Reason |
+|---|---|
+| `404` | Poll not found |
+
+---
+
+### Reset Votes
+
+`POST /api/polls/admin/:adminId/reset`
+
+Deletes all votes for the poll while keeping the poll and its options intact. Broadcasts zeroed results via WebSocket.
+
+**Response (`200`):**
+
+```json
+{
+  "poll": { ... },
+  "options": [
+    { "id": 1, "poll_id": 1, "text": "TypeScript", "position": 0, "votes": 0 }
+  ],
+  "total_votes": 0
+}
+```
+
+**Errors:**
+
+| Status | Reason |
+|---|---|
+| `404` | Poll not found |
+
+---
+
 ## Health
 
 ### Health Check

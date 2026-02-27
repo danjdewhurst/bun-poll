@@ -14,7 +14,7 @@ beforeAll(async () => {
   db.run("DELETE FROM polls");
 
   // Dynamically import and start the server
-  const { createPoll, getPoll, votePoll, getAdminPoll, exportPoll, summaryPoll } = await import("./src/routes/polls.ts");
+  const { createPoll, getPoll, votePoll, getAdminPoll, exportPoll, summaryPoll, closePollHandler, deletePoll, resetVotes } = await import("./src/routes/polls.ts");
   const { healthCheck } = await import("./src/routes/health.ts");
   const { websocketHandlers } = await import("./src/routes/websocket.ts");
   const { setServer } = await import("./src/server-ref.ts");
@@ -32,7 +32,9 @@ beforeAll(async () => {
       "/api/polls": { POST: createPoll },
       "/api/polls/:shareId": { GET: getPoll },
       "/api/polls/:shareId/vote": { POST: votePoll },
-      "/api/polls/admin/:adminId": { GET: getAdminPoll },
+      "/api/polls/admin/:adminId": { GET: getAdminPoll, DELETE: deletePoll },
+      "/api/polls/admin/:adminId/close": { POST: closePollHandler },
+      "/api/polls/admin/:adminId/reset": { POST: resetVotes },
       "/api/polls/admin/:adminId/export": { GET: exportPoll },
       "/api/polls/admin/:adminId/summary": { GET: summaryPoll },
     },
@@ -340,6 +342,93 @@ describe("GET /health", () => {
     await createTestPoll();
     const after = await fetch(`${baseUrl}/health`).then(r => r.json()) as any;
     expect(after.polls).toBe(before.polls + 1);
+  });
+});
+
+describe("POST /api/polls/admin/:adminId/close", () => {
+  test("closes a poll and returns updated data with expires_at set", async () => {
+    const { data: created } = await createTestPoll();
+    const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/close`, {
+      method: "POST",
+    });
+    const data = await res.json() as any;
+    expect(res.status).toBe(200);
+    expect(data.poll.expires_at).toBeNumber();
+    expect(data.poll.expires_at).toBeLessThanOrEqual(Date.now());
+    expect(data.options).toHaveLength(3);
+  });
+
+  test("returns 409 if poll is already closed", async () => {
+    const { data: created } = await createTestPoll({ expires_in_minutes: -1 });
+    const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/close`, {
+      method: "POST",
+    });
+    expect(res.status).toBe(409);
+    const data = await res.json() as any;
+    expect(data.error).toBe("Poll is already closed");
+  });
+
+  test("returns 404 for invalid admin ID", async () => {
+    const res = await fetch(`${baseUrl}/api/polls/admin/nonexist/close`, {
+      method: "POST",
+    });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("DELETE /api/polls/admin/:adminId", () => {
+  test("deletes a poll and returns deleted true", async () => {
+    const { data: created } = await createTestPoll();
+    const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}`, {
+      method: "DELETE",
+    });
+    const data = await res.json() as any;
+    expect(res.status).toBe(200);
+    expect(data.deleted).toBe(true);
+
+    // Verify poll is no longer accessible
+    const checkRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
+    expect(checkRes.status).toBe(404);
+  });
+
+  test("returns 404 for invalid admin ID", async () => {
+    const res = await fetch(`${baseUrl}/api/polls/admin/nonexist`, {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("POST /api/polls/admin/:adminId/reset", () => {
+  test("resets votes and returns zeroed results", async () => {
+    const { data: created } = await createTestPoll();
+    // Cast a vote first
+    const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
+    const pollData = await pollRes.json() as any;
+    const optionId = pollData.options[0].id;
+    await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ option_ids: [optionId], voter_token: crypto.randomUUID() }),
+    });
+
+    // Reset votes
+    const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/reset`, {
+      method: "POST",
+    });
+    const data = await res.json() as any;
+    expect(res.status).toBe(200);
+    expect(data.total_votes).toBe(0);
+    for (const opt of data.options) {
+      expect(opt.votes).toBe(0);
+    }
+  });
+
+  test("returns 404 for invalid admin ID", async () => {
+    const res = await fetch(`${baseUrl}/api/polls/admin/nonexist/reset`, {
+      method: "POST",
+    });
+    expect(res.status).toBe(404);
   });
 });
 

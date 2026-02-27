@@ -114,4 +114,27 @@ export const getPollCount = db.prepare<{ count: number }, []>(
   `SELECT COUNT(*) AS count FROM polls`
 );
 
+export const closePollStmt = db.prepare<
+  {
+    id: number;
+    share_id: string;
+    admin_id: string;
+    question: string;
+    allow_multiple: number;
+    expires_at: number | null;
+    created_at: number;
+  },
+  [number, string]
+>(
+  `UPDATE polls SET expires_at = ? WHERE admin_id = ? RETURNING *`
+);
+
+export const deletePollStmt = db.prepare<void, [string]>(
+  `DELETE FROM polls WHERE admin_id = ?`
+);
+
+export const resetVotesStmt = db.prepare<void, [number]>(
+  `DELETE FROM votes WHERE poll_id = ?`
+);
+
 export { db };
