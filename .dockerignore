@@ -1,0 +1,11 @@
+node_modules
+.git
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+.env*
+.DS_Store
+.idea
+coverage
+*.lcov
+docs
