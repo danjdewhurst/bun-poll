@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.2.0](https://github.com/danjdewhurst/bun-poll/compare/v1.1.0...v1.2.0) (2026-02-27)
+
+
+### Features
+
+* add compact iframe embed mode for polls ([9ef699c](https://github.com/danjdewhurst/bun-poll/commit/9ef699c2f05272abbd451305d4833a031ae42352))
+* add IP-based vote deduplication alongside token check ([15f2a94](https://github.com/danjdewhurst/bun-poll/commit/15f2a944c84490d0c5e0497f74e81334ebfb01df))
+* add scheduled polls with future start time ([e40b338](https://github.com/danjdewhurst/bun-poll/commit/e40b338ac1d9254b4c7891c8fbc9df3ef30ca32e))
+* add share buttons (copy link, email, QR code, native share) ([ede6a29](https://github.com/danjdewhurst/bun-poll/commit/ede6a298512bd8fae8e068615b07fbe86e0a80a1))
+
+
+### Bug Fixes
+
+* elevate share card stacking context above sibling cards ([eb2f4a2](https://github.com/danjdewhurst/bun-poll/commit/eb2f4a2df5187347b6959c51e6e228d221cf6fa9))
+* QR popover clipped by parent card overflow ([7bd0a18](https://github.com/danjdewhurst/bun-poll/commit/7bd0a184f5d239d26a253226ee16fc158a4ead42))
+* style datetime-local input and add scheduled poll support to embed ([6797d11](https://github.com/danjdewhurst/bun-poll/commit/6797d11655988b2fd0be3d22dd1acef6a37c9f66))
+
 ## [1.1.0](https://github.com/danjdewhurst/bun-poll/compare/v1.0.0...v1.1.0) (2026-02-27)
 
 
