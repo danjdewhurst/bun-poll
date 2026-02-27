@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: bun-poll
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    disk:
+      name: bun-poll-data
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: DB_PATH
+        value: /app/data/bun-poll.sqlite
