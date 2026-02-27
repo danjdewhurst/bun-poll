@@ -1,4 +1,5 @@
 import admin from "./frontend/admin.html";
+import embed from "./frontend/embed.html";
 import home from "./frontend/home.html";
 import poll from "./frontend/poll.html";
 import { getFeatures } from "./src/features.ts";
@@ -25,6 +26,7 @@ const server = Bun.serve({
   routes: {
     "/": home,
     "/poll/:shareId": poll,
+    "/embed/:shareId": embed,
     "/admin/:adminId": admin,
     "/health": { GET: healthCheck },
     "/api/features": { GET: getFeatureFlags },

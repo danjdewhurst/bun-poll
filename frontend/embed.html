@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' ws: wss:;">
+  <title>Poll — bun-poll</title>
+  <link rel="stylesheet" href="./embed.css">
+</head>
+<body>
+  <div id="loading" class="embed-loading">
+    <div class="embed-spinner"></div>
+    <div class="embed-loading-text">Loading poll&hellip;</div>
+  </div>
+
+  <div id="embed-view" class="hidden">
+    <h1 class="embed-question" id="question"></h1>
+
+    <div id="vote-section">
+      <div class="embed-hint" id="vote-hint">Choose one</div>
+      <form id="vote-form">
+        <div id="vote-options"></div>
+        <button type="submit" class="embed-btn" id="vote-btn">Vote</button>
+        <div id="error" class="embed-error hidden"></div>
+      </form>
+    </div>
+
+    <div id="results-section" class="hidden">
+      <div id="results"></div>
+      <div class="embed-status-bar">
+        <span class="embed-vote-count" id="total-votes" aria-live="polite"></span>
+        <span class="embed-live-indicator" id="ws-status">
+          <span class="embed-live-dot" id="ws-dot"></span>
+          <span id="ws-text" aria-live="polite">Connecting&hellip;</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="embed-footer">
+      <a id="full-poll-link" href="#" target="_blank" rel="noopener">View full poll &rarr;</a>
+    </div>
+  </div>
+
+  <script src="./embed.js"></script>
+</body>
+</html>
