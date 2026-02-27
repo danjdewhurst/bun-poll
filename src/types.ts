@@ -4,6 +4,7 @@ export interface Poll {
   admin_id: string;
   question: string;
   allow_multiple: number;
+  starts_at: number | null;
   expires_at: number | null;
   created_at: number;
 }
@@ -39,6 +40,7 @@ export interface CreatePollRequest {
   options: string[];
   allow_multiple?: boolean;
   expires_in_minutes?: number;
+  starts_at?: string;
 }
 
 export interface VoteRequest {

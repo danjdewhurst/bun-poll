@@ -16,6 +16,8 @@ const voterToken = getVoterToken();
 const loadingEl = document.getElementById("loading");
 const pollViewEl = document.getElementById("poll-view");
 const questionEl = document.getElementById("question");
+const scheduledSectionEl = document.getElementById("scheduled-section");
+const countdownTimerEl = document.getElementById("countdown-timer");
 const voteSectionEl = document.getElementById("vote-section");
 const voteOptionsEl = document.getElementById("vote-options");
 const voteHintEl = document.getElementById("vote-hint");
@@ -124,7 +126,15 @@ async function loadPoll() {
 
     questionEl.textContent = data.poll.question;
 
-    if (data.poll.expires_at && Date.now() > data.poll.expires_at) {
+    const isScheduled = data.poll.starts_at && Date.now() < data.poll.starts_at;
+    const isExpired = data.poll.expires_at && Date.now() > data.poll.expires_at;
+
+    if (isScheduled) {
+      const badge = document.createElement("span");
+      badge.className = "scheduled-badge";
+      badge.textContent = "Coming soon";
+      questionEl.appendChild(badge);
+    } else if (isExpired) {
       const badge = document.createElement("span");
       badge.className = "expired-badge";
       badge.textContent = "Expired";
@@ -134,7 +144,11 @@ async function loadPoll() {
     loadingEl.classList.add("hidden");
     pollViewEl.classList.remove("hidden");
 
-    if (hasVoted || (data.poll.expires_at && Date.now() > data.poll.expires_at)) {
+    if (isScheduled) {
+      voteSectionEl.classList.add("hidden");
+      scheduledSectionEl.classList.remove("hidden");
+      startCountdown(data.poll.starts_at);
+    } else if (hasVoted || isExpired) {
       voteSectionEl.classList.add("hidden");
       showResults(data.options, data.total_votes);
     } else {
@@ -211,5 +225,27 @@ document.getElementById("vote-form").addEventListener("submit", async (e) => {
     voteBtn.disabled = false;
   }
 });
+
+function startCountdown(startsAt) {
+  function update() {
+    const remaining = startsAt - Date.now();
+    if (remaining <= 0) {
+      window.location.reload();
+      return;
+    }
+    const totalSeconds = Math.floor(remaining / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const parts = [];
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0 || hours > 0) parts.push(`${String(minutes).padStart(2, "0")}m`);
+    parts.push(`${String(seconds).padStart(2, "0")}s`);
+    countdownTimerEl.textContent = parts.join(" ");
+  }
+  update();
+  setInterval(update, 1000);
+}
 
 loadPoll();

@@ -103,13 +103,30 @@ export async function createPoll(req: Request): Promise<Response> {
     trimmedOptions.push(opt);
   }
 
+  let startsAt: number | null = null;
+  if (body.starts_at !== undefined && body.starts_at !== null) {
+    const parsed = Date.parse(body.starts_at);
+    if (Number.isNaN(parsed)) {
+      return Response.json({ error: "Invalid starts_at date" }, { status: 400 });
+    }
+    if (parsed <= Date.now()) {
+      return Response.json({ error: "starts_at must be in the future" }, { status: 400 });
+    }
+    startsAt = parsed;
+  }
+
   const shareId = generateShareId();
   const adminId = crypto.randomUUID();
   const allowMultiple = body.allow_multiple ? 1 : 0;
   const expiresAt = body.expires_in_minutes ? Date.now() + body.expires_in_minutes * 60_000 : null;
+
+  if (startsAt !== null && expiresAt !== null && startsAt >= expiresAt) {
+    return Response.json({ error: "starts_at must be before expires_at" }, { status: 400 });
+  }
+
   const now = Date.now();
 
-  const poll = insertPoll.get(shareId, adminId, question, allowMultiple, expiresAt, now);
+  const poll = insertPoll.get(shareId, adminId, question, allowMultiple, startsAt, expiresAt, now);
 
   if (!poll) {
     return Response.json({ error: "Failed to create poll" }, { status: 500 });
@@ -143,6 +160,7 @@ export function getPoll(req: ParamsRequest<{ shareId: string }>): Response {
       share_id: poll.share_id,
       question: poll.question,
       allow_multiple: poll.allow_multiple,
+      starts_at: poll.starts_at,
       expires_at: poll.expires_at,
       created_at: poll.created_at,
     },
@@ -174,6 +192,10 @@ export async function votePoll(req: ParamsRequest<{ shareId: string }>): Promise
 
   if (poll.expires_at && Date.now() >= poll.expires_at) {
     return Response.json({ error: "Poll has expired" }, { status: 410 });
+  }
+
+  if (poll.starts_at && Date.now() < poll.starts_at) {
+    return Response.json({ error: "Poll has not started yet" }, { status: 403 });
   }
 
   const body = (await req.json()) as VoteRequest;
@@ -217,6 +239,7 @@ function safePoll(poll: {
   admin_id: string;
   question: string;
   allow_multiple: number;
+  starts_at: number | null;
   expires_at: number | null;
   created_at: number;
 }) {
@@ -224,6 +247,7 @@ function safePoll(poll: {
     share_id: poll.share_id,
     question: poll.question,
     allow_multiple: poll.allow_multiple,
+    starts_at: poll.starts_at,
     expires_at: poll.expires_at,
     created_at: poll.created_at,
   };

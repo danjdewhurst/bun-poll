@@ -121,7 +121,16 @@ async function loadAdmin() {
 
     questionEl.textContent = data.poll.question;
 
-    if (data.poll.expires_at && Date.now() > data.poll.expires_at) {
+    const isScheduled = data.poll.starts_at && Date.now() < data.poll.starts_at;
+
+    if (isScheduled) {
+      if (!questionEl.querySelector(".scheduled-badge")) {
+        const badge = document.createElement("span");
+        badge.className = "scheduled-badge";
+        badge.textContent = "Scheduled";
+        questionEl.appendChild(badge);
+      }
+    } else if (data.poll.expires_at && Date.now() > data.poll.expires_at) {
       markExpired();
     }
 
@@ -129,6 +138,9 @@ async function loadAdmin() {
     shareLinkEl.querySelector(".link-text").textContent = `${origin}/poll/${shareId}`;
 
     document.getElementById("created-at").textContent = formatDate(data.poll.created_at);
+    document.getElementById("starts-at").textContent = data.poll.starts_at
+      ? formatDate(data.poll.starts_at)
+      : "Immediately";
     document.getElementById("expires-at").textContent = data.poll.expires_at
       ? formatDate(data.poll.expires_at)
       : "Never";

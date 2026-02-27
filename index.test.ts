@@ -864,3 +864,78 @@ describe("Feature flags — websocket disabled", () => {
     expect(data.total_votes).toBe(1);
   });
 });
+
+describe("Scheduled polls", () => {
+  test("creates poll with valid future starts_at", async () => {
+    const futureDate = new Date(Date.now() + 3_600_000).toISOString();
+    const { res, data } = await createTestPoll({ starts_at: futureDate });
+    expect(res.status).toBe(200);
+    expect(data.share_id).toBeString();
+  });
+
+  test("rejects starts_at in the past", async () => {
+    const pastDate = new Date(Date.now() - 60_000).toISOString();
+    const { res, data } = await createTestPoll({ starts_at: pastDate });
+    expect(res.status).toBe(400);
+    expect(data.error).toContain("future");
+  });
+
+  test("rejects invalid starts_at string", async () => {
+    const { res, data } = await createTestPoll({ starts_at: "not-a-date" });
+    expect(res.status).toBe(400);
+    expect(data.error).toContain("Invalid starts_at");
+  });
+
+  test("rejects starts_at >= expires_at", async () => {
+    const startsAt = new Date(Date.now() + 7_200_000).toISOString(); // +2h
+    const { res, data } = await createTestPoll({
+      starts_at: startsAt,
+      expires_in_minutes: 60, // +1h — before starts_at
+    });
+    expect(res.status).toBe(400);
+    expect(data.error).toContain("before expires_at");
+  });
+
+  test("vote before start time returns 403", async () => {
+    const futureDate = new Date(Date.now() + 3_600_000).toISOString();
+    const { data: created } = await createTestPoll({ starts_at: futureDate });
+    const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
+    const pollData = (await pollRes.json()) as any;
+    const optionId = pollData.options[0].id;
+
+    const res = await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ option_ids: [optionId], voter_token: crypto.randomUUID() }),
+    });
+    expect(res.status).toBe(403);
+    const data = (await res.json()) as any;
+    expect(data.error).toContain("not started");
+  });
+
+  test("GET poll returns starts_at field", async () => {
+    const futureDate = new Date(Date.now() + 3_600_000).toISOString();
+    const { data: created } = await createTestPoll({ starts_at: futureDate });
+    const res = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
+    const data = (await res.json()) as any;
+    expect(res.status).toBe(200);
+    expect(data.poll.starts_at).toBeNumber();
+    expect(data.poll.starts_at).toBeGreaterThan(Date.now());
+  });
+
+  test("GET admin poll returns starts_at field", async () => {
+    const futureDate = new Date(Date.now() + 3_600_000).toISOString();
+    const { data: created } = await createTestPoll({ starts_at: futureDate });
+    const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}`);
+    const data = (await res.json()) as any;
+    expect(res.status).toBe(200);
+    expect(data.poll.starts_at).toBeNumber();
+  });
+
+  test("create without starts_at returns null (backwards compat)", async () => {
+    const { data: created } = await createTestPoll();
+    const res = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
+    const data = (await res.json()) as any;
+    expect(data.poll.starts_at).toBeNull();
+  });
+});

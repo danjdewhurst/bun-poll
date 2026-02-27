@@ -17,10 +17,6 @@ _Nothing here right now — suggest something!_
 - **Open-ended** — free-text responses alongside fixed options
 - **Image options** — option cards with uploaded or linked images
 
-### Scheduled Polls
-- Set a future start time so voting opens automatically
-- "Coming soon" state shown before the start time
-
 ### Embed Mode
 - Compact `<iframe>` embed for blogs and docs
 - `/embed/:shareId` route with minimal chrome and a query param API for styling
@@ -70,6 +66,12 @@ _Nothing here right now — suggest something!_
 ---
 
 ## Done
+
+### Scheduled Polls
+- Set a future start time so voting opens automatically
+- "Coming soon" state with countdown shown before the start time
+- Voting blocked with 403 until start time
+- Admin page shows "Starts" date in details and "Scheduled" badge
 
 ### Live Viewer Count
 - "X watching" indicator on both poll and admin pages

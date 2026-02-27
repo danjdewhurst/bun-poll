@@ -13,6 +13,12 @@ const MAX_QUESTION_LENGTH = 500;
 const MAX_OPTION_LENGTH = 200;
 const MAX_OPTIONS = 20;
 
+const startsAtInput = document.getElementById("starts-at");
+// Set min to current datetime so past dates cannot be selected
+const now = new Date();
+now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+startsAtInput.min = now.toISOString().slice(0, 16);
+
 let optionCount = 2;
 
 function renumberOptions() {
@@ -71,6 +77,8 @@ form.addEventListener("submit", async (e) => {
     .map((input) => input.value.trim())
     .filter(Boolean);
   const allowMultiple = document.getElementById("allow-multiple").checked;
+  const startsAtRaw = startsAtInput.value;
+  const startsAt = startsAtRaw ? new Date(startsAtRaw).toISOString() : undefined;
   const expiresRaw = document.getElementById("expires").value;
   const expiresInMinutes = expiresRaw ? parseInt(expiresRaw, 10) : undefined;
 
@@ -112,6 +120,7 @@ form.addEventListener("submit", async (e) => {
         question,
         options,
         allow_multiple: allowMultiple,
+        starts_at: startsAt,
         expires_in_minutes: expiresInMinutes,
       }),
     });

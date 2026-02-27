@@ -787,6 +787,32 @@ input[type="number"]:focus {
   vertical-align: middle;
 }
 
+.scheduled-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(247, 201, 72, 0.12);
+  color: var(--accent-end);
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  margin-left: 0.6rem;
+  vertical-align: middle;
+}
+
+.countdown {
+  font-size: 2rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--text);
+  padding: 1rem 0;
+}
+
 /* ── Error messages ── */
 
 .error {

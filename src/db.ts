@@ -14,6 +14,7 @@ db.run(`
     admin_id       TEXT NOT NULL UNIQUE,
     question       TEXT NOT NULL,
     allow_multiple INTEGER NOT NULL DEFAULT 0,
+    starts_at      INTEGER,
     expires_at     INTEGER,
     created_at     INTEGER NOT NULL
   )
@@ -42,12 +43,18 @@ db.run(`
 db.run(`CREATE INDEX IF NOT EXISTS idx_votes_option_id ON votes(option_id)`);
 db.run(`CREATE INDEX IF NOT EXISTS idx_votes_poll_voter ON votes(poll_id, voter_token)`);
 
+try {
+  db.run(`ALTER TABLE polls ADD COLUMN starts_at INTEGER`);
+} catch {
+  // Column already exists
+}
+
 export const insertPoll = db.prepare<
   { id: number; share_id: string; admin_id: string },
-  [string, string, string, number, number | null, number]
+  [string, string, string, number, number | null, number | null, number]
 >(
-  `INSERT INTO polls (share_id, admin_id, question, allow_multiple, expires_at, created_at)
-   VALUES (?, ?, ?, ?, ?, ?) RETURNING id, share_id, admin_id`,
+  `INSERT INTO polls (share_id, admin_id, question, allow_multiple, starts_at, expires_at, created_at)
+   VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id, share_id, admin_id`,
 );
 
 export const insertOption = db.prepare<void, [number, string, number]>(
@@ -61,6 +68,7 @@ export const getPollByShareId = db.prepare<
     admin_id: string;
     question: string;
     allow_multiple: number;
+    starts_at: number | null;
     expires_at: number | null;
     created_at: number;
   },
@@ -74,6 +82,7 @@ export const getPollByAdminId = db.prepare<
     admin_id: string;
     question: string;
     allow_multiple: number;
+    starts_at: number | null;
     expires_at: number | null;
     created_at: number;
   },
@@ -124,6 +133,7 @@ export const closePollStmt = db.prepare<
     admin_id: string;
     question: string;
     allow_multiple: number;
+    starts_at: number | null;
     expires_at: number | null;
     created_at: number;
   },
