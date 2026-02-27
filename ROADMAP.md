@@ -6,10 +6,7 @@ Ideas and planned improvements for bun-poll. Contributions welcome — pick anyt
 
 ## Near Term
 
-### Feature Flags
-- Allow users to completely disable certain features (e.g. exports, WebSocket live updates, admin management actions)
-- Simple config object or environment variables to toggle features on/off
-- Disabled features should hide their UI elements and return appropriate API responses
+_Nothing here right now — suggest something!_
 
 ---
 
@@ -103,6 +100,12 @@ Ideas and planned improvements for bun-poll. Contributions welcome — pick anyt
 - `GET /health` endpoint returning uptime, poll count, and database status
 - Returns `"degraded"` with HTTP 503 when the database is unreachable
 - Useful for monitoring and load balancer probes
+
+### Feature Flags
+- Environment variables to disable exports, WebSocket live updates, or admin management actions
+- `GET /api/features` endpoint for frontend discovery of enabled features
+- Disabled features return 403 from the API and hide their UI sections automatically
+- All features enabled by default (opt-out model)
 
 ---
 

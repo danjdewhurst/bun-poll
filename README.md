@@ -46,6 +46,7 @@ Most poll tools are over-engineered SaaS products or require a dozen packages ju
 | 🔧 | **Poll management** | Close voting early, reset votes, or delete polls from the admin page |
 | 🛡️ | **Input guardrails** | Length limits, rate limiting on votes, and Content-Security-Policy headers |
 | 💾 | **SQLite persistence** | WAL mode, zero external services |
+| 🎛️ | **Feature flags** | Toggle exports, WebSockets, or admin actions on/off via environment variables |
 | 🪶 | **Vanilla frontend** | No build step, no framework — just HTML/CSS/JS via Bun's HTML imports |
 
 ---
@@ -105,8 +106,20 @@ index.test.ts                 Integration tests
 |----------|---------|-------------|
 | `PORT` | `3000` | Server port |
 | `DB_PATH` | `bun-poll.sqlite` | SQLite database file path |
+| `FEATURE_EXPORTS` | `true` | Enable CSV/JSON export and copy summary |
+| `FEATURE_WEBSOCKET` | `true` | Enable WebSocket live updates and viewer counts |
+| `FEATURE_ADMIN_MANAGEMENT` | `true` | Enable close, reset, and delete actions |
 
 > Bun loads `.env` files automatically — no dotenv needed.
+
+### Feature Flags
+
+Any feature flag can be disabled by setting it to `"false"` or `"0"` in your `.env` or shell environment. Disabled features return **403** from the API and their UI sections are hidden automatically. A `GET /api/features` endpoint returns the current flag state as JSON.
+
+```bash
+# Example: run with exports and admin management disabled
+FEATURE_EXPORTS=false FEATURE_ADMIN_MANAGEMENT=false bun --hot index.ts
+```
 
 ---
 
