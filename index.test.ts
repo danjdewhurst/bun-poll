@@ -1,7 +1,8 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: test helpers use loose typing for API response assertions
 // biome-ignore-all lint/style/noNonNullAssertion: test assertions where index access is known-safe
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { db } from "./src/db.ts";
+import { _overrideFeaturesForTest, getFeatures } from "./src/features.ts";
 import { resetRateLimitStore } from "./src/rate-limit.ts";
 
 const PORT = 0; // Let OS pick a free port
@@ -24,6 +25,7 @@ beforeAll(async () => {
     deletePoll,
     resetVotes,
   } = await import("./src/routes/polls.ts");
+  const { getFeatureFlags } = await import("./src/routes/features.ts");
   const { healthCheck } = await import("./src/routes/health.ts");
   const { websocketHandlers } = await import("./src/routes/websocket.ts");
   const { setServer } = await import("./src/server-ref.ts");
@@ -38,6 +40,7 @@ beforeAll(async () => {
       "/poll/:shareId": poll,
       "/admin/:adminId": admin,
       "/health": { GET: healthCheck },
+      "/api/features": { GET: getFeatureFlags },
       "/api/polls": { POST: createPoll },
       "/api/polls/:shareId": { GET: getPoll },
       "/api/polls/:shareId/vote": { POST: votePoll },
@@ -51,6 +54,9 @@ beforeAll(async () => {
       const url = new URL(req.url);
       const wsMatch = url.pathname.match(/^\/ws\/([a-f0-9]+)$/);
       if (wsMatch) {
+        if (!getFeatures().websocket) {
+          return new Response("WebSocket disabled", { status: 403 });
+        }
         const upgraded = server.upgrade(req, { data: { shareId: wsMatch[1]! } });
         if (upgraded) return undefined;
         return new Response("WebSocket upgrade failed", { status: 400 });
@@ -751,5 +757,110 @@ describe("WebSocket viewer count", () => {
     expect(result.count).toBe(1);
 
     ws1.close();
+  });
+});
+
+describe("GET /api/features", () => {
+  test("returns all features as true by default", async () => {
+    const res = await fetch(`${baseUrl}/api/features`);
+    expect(res.status).toBe(200);
+    const data = (await res.json()) as any;
+    expect(data.exports).toBe(true);
+    expect(data.websocket).toBe(true);
+    expect(data.adminManagement).toBe(true);
+  });
+
+  test("reflects overridden features", async () => {
+    _overrideFeaturesForTest({ exports: false });
+    const res = await fetch(`${baseUrl}/api/features`);
+    const data = (await res.json()) as any;
+    expect(data.exports).toBe(false);
+    expect(data.websocket).toBe(true);
+    _overrideFeaturesForTest(null);
+  });
+});
+
+describe("Feature flags — exports disabled", () => {
+  beforeEach(() => _overrideFeaturesForTest({ exports: false }));
+  afterEach(() => _overrideFeaturesForTest(null));
+
+  test("export endpoint returns 403", async () => {
+    const { data: created } = await createTestPoll();
+    const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/export`);
+    expect(res.status).toBe(403);
+    const data = (await res.json()) as any;
+    expect(data.error).toBe("Feature disabled");
+  });
+
+  test("summary endpoint returns 403", async () => {
+    const { data: created } = await createTestPoll();
+    const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/summary`);
+    expect(res.status).toBe(403);
+    const data = (await res.json()) as any;
+    expect(data.error).toBe("Feature disabled");
+  });
+});
+
+describe("Feature flags — admin management disabled", () => {
+  beforeEach(() => _overrideFeaturesForTest({ adminManagement: false }));
+  afterEach(() => _overrideFeaturesForTest(null));
+
+  test("close endpoint returns 403", async () => {
+    const { data: created } = await createTestPoll();
+    const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/close`, {
+      method: "POST",
+    });
+    expect(res.status).toBe(403);
+    const data = (await res.json()) as any;
+    expect(data.error).toBe("Feature disabled");
+  });
+
+  test("reset endpoint returns 403", async () => {
+    const { data: created } = await createTestPoll();
+    const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}/reset`, {
+      method: "POST",
+    });
+    expect(res.status).toBe(403);
+    const data = (await res.json()) as any;
+    expect(data.error).toBe("Feature disabled");
+  });
+
+  test("delete endpoint returns 403", async () => {
+    const { data: created } = await createTestPoll();
+    const res = await fetch(`${baseUrl}/api/polls/admin/${created.admin_id}`, {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(403);
+    const data = (await res.json()) as any;
+    expect(data.error).toBe("Feature disabled");
+  });
+});
+
+describe("Feature flags — websocket disabled", () => {
+  beforeEach(() => _overrideFeaturesForTest({ websocket: false }));
+  afterEach(() => _overrideFeaturesForTest(null));
+
+  test("WS upgrade returns 403", async () => {
+    const { data: created } = await createTestPoll();
+    const res = await fetch(`${baseUrl}/ws/${created.share_id}`);
+    expect(res.status).toBe(403);
+    const text = await res.text();
+    expect(text).toBe("WebSocket disabled");
+  });
+
+  test("voting still works without websocket", async () => {
+    const { data: created } = await createTestPoll();
+    const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
+    const pollData = (await pollRes.json()) as any;
+    const optionId = pollData.options[0].id;
+
+    const res = await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ option_ids: [optionId], voter_token: crypto.randomUUID() }),
+    });
+    expect(res.status).toBe(200);
+    const data = (await res.json()) as any;
+    expect(data.total_votes).toBe(1);
   });
 });

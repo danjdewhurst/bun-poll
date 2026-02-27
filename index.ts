@@ -1,6 +1,8 @@
 import admin from "./frontend/admin.html";
 import home from "./frontend/home.html";
 import poll from "./frontend/poll.html";
+import { getFeatures } from "./src/features.ts";
+import { getFeatureFlags } from "./src/routes/features.ts";
 import { healthCheck } from "./src/routes/health.ts";
 import {
   closePollHandler,
@@ -25,6 +27,7 @@ const server = Bun.serve({
     "/poll/:shareId": poll,
     "/admin/:adminId": admin,
     "/health": { GET: healthCheck },
+    "/api/features": { GET: getFeatureFlags },
     "/api/polls": {
       POST: createPoll,
     },
@@ -55,6 +58,9 @@ const server = Bun.serve({
     const url = new URL(req.url);
     const wsMatch = url.pathname.match(/^\/ws\/([a-f0-9]+)$/);
     if (wsMatch) {
+      if (!getFeatures().websocket) {
+        return new Response("WebSocket disabled", { status: 403 });
+      }
       const upgraded = server.upgrade(req, {
         // biome-ignore lint/style/noNonNullAssertion: regex capture group is guaranteed by match
         data: { shareId: wsMatch[1]! },

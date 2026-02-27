@@ -1,5 +1,7 @@
 const adminId = window.location.pathname.split("/").pop();
 
+let features = { exports: true, websocket: true, adminManagement: true };
+
 const loadingEl = document.getElementById("loading");
 const adminViewEl = document.getElementById("admin-view");
 const questionEl = document.getElementById("question");
@@ -102,7 +104,13 @@ function formatDate(ms) {
 
 async function loadAdmin() {
   try {
-    const res = await fetch(`/api/polls/admin/${adminId}`);
+    const [featuresRes, res] = await Promise.all([
+      fetch("/api/features"),
+      fetch(`/api/polls/admin/${adminId}`),
+    ]);
+
+    if (featuresRes.ok) features = await featuresRes.json();
+
     if (!res.ok) {
       const data = await res.json();
       throw new Error(data.error || "Failed to load poll");
@@ -131,10 +139,22 @@ async function loadAdmin() {
 
     renderResults(data.options, data.total_votes);
 
+    if (!features.exports) {
+      document.querySelector('[data-section="export"]').classList.add("hidden");
+    }
+    if (!features.adminManagement) {
+      document.querySelector('[data-section="management"]').classList.add("hidden");
+    }
+
     loadingEl.classList.add("hidden");
     adminViewEl.classList.remove("hidden");
 
-    connectWs();
+    if (features.websocket) {
+      connectWs();
+    } else {
+      document.getElementById("ws-status").classList.add("hidden");
+      document.getElementById("viewer-bar").classList.add("hidden");
+    }
   } catch (err) {
     loadingEl.querySelector(".loading-spinner").remove();
     const textEl = loadingEl.querySelector(".loading-text");

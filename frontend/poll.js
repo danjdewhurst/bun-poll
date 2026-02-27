@@ -1,4 +1,5 @@
 const shareId = window.location.pathname.split("/").pop();
+let features = { websocket: true };
 const VOTER_TOKEN_KEY = `voter_token_${shareId}`;
 
 function getVoterToken() {
@@ -106,7 +107,13 @@ function connectWs() {
 
 async function loadPoll() {
   try {
-    const res = await fetch(`/api/polls/${shareId}?voter_token=${voterToken}`);
+    const [featuresRes, res] = await Promise.all([
+      fetch("/api/features"),
+      fetch(`/api/polls/${shareId}?voter_token=${voterToken}`),
+    ]);
+
+    if (featuresRes.ok) features = await featuresRes.json();
+
     if (!res.ok) {
       const data = await res.json();
       throw new Error(data.error || "Failed to load poll");
@@ -134,7 +141,12 @@ async function loadPoll() {
       renderVoteOptions(data);
     }
 
-    connectWs();
+    if (features.websocket) {
+      connectWs();
+    } else {
+      document.getElementById("ws-status").classList.add("hidden");
+      document.getElementById("viewer-bar").classList.add("hidden");
+    }
   } catch (err) {
     loadingEl.querySelector(".loading-spinner").remove();
     const textEl = loadingEl.querySelector(".loading-text");

@@ -12,6 +12,7 @@ import {
   insertVote,
   resetVotesStmt,
 } from "../db.ts";
+import { getFeatures } from "../features.ts";
 import { checkRateLimit } from "../rate-limit.ts";
 import { getClientIp, getServer } from "../server-ref.ts";
 import type { CreatePollRequest, VoteRequest, WsMessage } from "../types.ts";
@@ -38,6 +39,7 @@ function buildResults(pollId: number, voterToken?: string) {
 }
 
 function broadcastResults(pollId: number, shareId: string): void {
+  if (!getFeatures().websocket) return;
   const { options, total_votes } = buildResults(pollId);
   const message: WsMessage = { type: "results", options, total_votes };
   getServer().publish(`poll-${shareId}`, JSON.stringify(message));
@@ -252,6 +254,9 @@ function escapeCsvField(value: string): string {
 }
 
 export function exportPoll(req: ParamsRequest<{ adminId: string }>): Response {
+  if (!getFeatures().exports) {
+    return Response.json({ error: "Feature disabled" }, { status: 403 });
+  }
   const adminId = req.params.adminId;
   const url = new URL(req.url);
   const format = url.searchParams.get("format") ?? "json";
@@ -304,6 +309,9 @@ export function exportPoll(req: ParamsRequest<{ adminId: string }>): Response {
 }
 
 export function summaryPoll(req: ParamsRequest<{ adminId: string }>): Response {
+  if (!getFeatures().exports) {
+    return Response.json({ error: "Feature disabled" }, { status: 403 });
+  }
   const adminId = req.params.adminId;
 
   const poll = getPollByAdminId.get(adminId);
@@ -330,6 +338,9 @@ export function summaryPoll(req: ParamsRequest<{ adminId: string }>): Response {
 }
 
 export function closePollHandler(req: ParamsRequest<{ adminId: string }>): Response {
+  if (!getFeatures().adminManagement) {
+    return Response.json({ error: "Feature disabled" }, { status: 403 });
+  }
   const adminId = req.params.adminId;
 
   const poll = getPollByAdminId.get(adminId);
@@ -350,8 +361,10 @@ export function closePollHandler(req: ParamsRequest<{ adminId: string }>): Respo
 
   const { options, total_votes } = buildResults(poll.id);
 
-  const message: WsMessage = { type: "closed", options, total_votes };
-  getServer().publish(`poll-${poll.share_id}`, JSON.stringify(message));
+  if (getFeatures().websocket) {
+    const message: WsMessage = { type: "closed", options, total_votes };
+    getServer().publish(`poll-${poll.share_id}`, JSON.stringify(message));
+  }
 
   return Response.json({
     poll: safePoll(updated),
@@ -361,6 +374,9 @@ export function closePollHandler(req: ParamsRequest<{ adminId: string }>): Respo
 }
 
 export function deletePoll(req: ParamsRequest<{ adminId: string }>): Response {
+  if (!getFeatures().adminManagement) {
+    return Response.json({ error: "Feature disabled" }, { status: 403 });
+  }
   const adminId = req.params.adminId;
 
   const poll = getPollByAdminId.get(adminId);
@@ -374,6 +390,9 @@ export function deletePoll(req: ParamsRequest<{ adminId: string }>): Response {
 }
 
 export function resetVotes(req: ParamsRequest<{ adminId: string }>): Response {
+  if (!getFeatures().adminManagement) {
+    return Response.json({ error: "Feature disabled" }, { status: 403 });
+  }
   const adminId = req.params.adminId;
 
   const poll = getPollByAdminId.get(adminId);
