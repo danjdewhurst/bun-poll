@@ -26,7 +26,7 @@ _Nothing here right now — suggest something!_
 - One-time magic link sent to the creator's email (if provided)
 
 ### Improved Voter Integrity
-- Combine localStorage token with IP fingerprint for stronger dedup
+- ~~Combine localStorage token with IP fingerprint for stronger dedup~~ ✓ (see Done)
 - Optional CAPTCHA challenge on high-traffic polls
 
 ### Share Buttons
@@ -108,6 +108,11 @@ _Nothing here right now — suggest something!_
 - `GET /api/features` endpoint for frontend discovery of enabled features
 - Disabled features return 403 from the API and hide their UI sections automatically
 - All features enabled by default (opt-out model)
+
+### Improved Voter Integrity (IP Fingerprint)
+- Vote dedup combines localStorage token with voter IP address
+- A vote is blocked if either the token or the IP has already voted on that poll
+- Existing votes from before the migration (empty IP) are not matched
 
 ---
 
