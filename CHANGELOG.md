@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.1](https://github.com/danjdewhurst/bun-poll/compare/v1.2.0...v1.2.1) (2026-02-27)
+
+
+### Bug Fixes
+
+* progress bars always showing full width due to CSP blocking inline styles ([4063d1d](https://github.com/danjdewhurst/bun-poll/commit/4063d1db8d7b3a25773eb415a32caef3b26afd46))
+* remove disk from Render config (not supported on free tier) ([773e1b9](https://github.com/danjdewhurst/bun-poll/commit/773e1b9e68776e43c8b63785bca27749508d66d5))
+* use proxy headers for client IP behind reverse proxy ([c59929a](https://github.com/danjdewhurst/bun-poll/commit/c59929aeb7740fa387491de29860d98c086d027f))
+
+
+### Reverts
+
+* remove Fly.io deployment config ([9d541d2](https://github.com/danjdewhurst/bun-poll/commit/9d541d27b789ed07381d37f31715c43238cd8534))
+
 ## [1.2.0](https://github.com/danjdewhurst/bun-poll/compare/v1.1.0...v1.2.0) (2026-02-27)
 
 
