@@ -1,17 +1,47 @@
-# bun-poll
+<div align="center">
 
-A lightweight, real-time poll application built entirely with [Bun](https://bun.sh) native APIs. No frameworks, no dependencies beyond Bun itself — just fast, live polls with WebSocket-powered updates.
+# 🗳️ bun-poll
+
+**Real-time polls, zero dependencies.**
+
+A lightweight poll app built entirely with [Bun](https://bun.sh) native APIs.
+No frameworks. No npm bloat. Just fast, live polls with WebSocket-powered updates.
+
+[![MIT Licence](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENCE)
+[![Bun](https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun&logoColor=000)](https://bun.sh)
+[![TypeScript](https://img.shields.io/badge/lang-TypeScript-3178c6?logo=typescript&logoColor=fff)](https://www.typescriptlang.org/)
+[![SQLite](https://img.shields.io/badge/database-SQLite-003B57?logo=sqlite&logoColor=fff)](https://www.sqlite.org/)
+[![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](#)
+
+</div>
+
+---
+
+## Why bun-poll?
+
+Most poll tools are over-engineered SaaS products or require a dozen packages just to get started. **bun-poll** takes a different approach:
+
+- **Zero runtime dependencies** — only Bun and its built-in APIs
+- **Single command to run** — no build step, no bundler config, no Docker
+- **Real-time by default** — every vote broadcasts instantly via WebSockets
+- **SQLite persistence** — WAL mode for concurrent reads, no external database needed
+
+---
 
 ## Features
 
-- **Instant poll creation** — no sign-up required
-- **Real-time results** — votes broadcast instantly via WebSockets
-- **Shareable links** — unique short URLs for voting, separate admin links for managing
-- **Single & multiple choice** — configurable per poll
-- **Poll expiry** — optional time limit on voting
-- **Vote deduplication** — one vote per browser, enforced client-side and at the database level
-- **SQLite persistence** — WAL mode for concurrent reads, zero external services
-- **Vanilla frontend** — no build step, no framework, just HTML/CSS/JS served via Bun's HTML imports
+| | Feature | Description |
+|---|---|---|
+| ⚡ | **Instant creation** | Create polls in seconds — no sign-up required |
+| 📡 | **Live results** | Votes broadcast to all viewers instantly via WebSockets |
+| 🔗 | **Shareable links** | Unique short URLs for voting, separate admin links for managing |
+| ☑️ | **Single & multiple choice** | Configurable per poll |
+| ⏱️ | **Poll expiry** | Optional time limit on voting |
+| 🛡️ | **Vote deduplication** | One vote per browser, enforced client-side and at the database level |
+| 💾 | **SQLite persistence** | WAL mode, zero external services |
+| 🪶 | **Vanilla frontend** | No build step, no framework — just HTML/CSS/JS via Bun's HTML imports |
+
+---
 
 ## Quick Start
 
@@ -28,35 +58,39 @@ bun install
 bun --hot index.ts
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to create your first poll.
+Open **[http://localhost:3000](http://localhost:3000)** to create your first poll.
 
-## Usage
+---
+
+## How It Works
+
+```
+┌─────────────┐       POST /api/polls        ┌──────────────┐
+│             │ ─────────────────────────────▸ │              │
+│   Browser   │       GET  /api/polls/:id     │  Bun.serve() │
+│             │ ◂───────────────────────────── │              │
+│  (vanilla   │       POST /vote              │  WebSocket   │
+│   HTML/JS)  │ ─────────────────────────────▸ │  broadcast   │
+│             │       ws://localhost/ws/:id    │              │
+│             │ ◂ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  │      │       │
+└─────────────┘   real-time vote updates      └──────┼───────┘
+                                                     │
+                                              ┌──────▾───────┐
+                                              │   SQLite      │
+                                              │   (WAL mode)  │
+                                              └──────────────┘
+```
 
 1. **Create** a poll at `/` — enter a question, add options, hit create
 2. **Share** the voting link with participants
 3. **Vote** at `/poll/:shareId` — results appear live after voting
-4. **Monitor** results at the admin link — real-time updates, share link for easy distribution
+4. **Monitor** results at the admin link — real-time updates with a share link for easy distribution
 
-## Project Structure
+---
 
-```
-index.ts                     # Entry point — Bun.serve() with routes & WebSockets
-src/
-  db.ts                      # SQLite schema, migrations, prepared statements
-  types.ts                   # Shared TypeScript interfaces
-  server-ref.ts              # Module-level server reference for WS broadcasting
-  routes/
-    polls.ts                 # API route handlers (create, get, vote, admin)
-    websocket.ts             # WebSocket open/close/message handlers
-frontend/
-  home.html / home.js        # Poll creation page
-  poll.html / poll.js        # Voting & live results page
-  admin.html / admin.js      # Admin results & share link page
-  styles.css                 # Shared styles
-index.test.ts                # Integration tests
-```
+## API Reference
 
-## API
+### Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -65,9 +99,11 @@ index.test.ts                # Integration tests
 | `POST` | `/api/polls/:shareId/vote` | Submit a vote |
 | `GET` | `/api/polls/admin/:adminId` | Get poll results (admin) |
 
-WebSocket connections are established at `/ws/:shareId` and receive live result broadcasts on each vote.
+### WebSocket
 
-### Create a poll
+Connect to `/ws/:shareId` to receive live result broadcasts on each vote.
+
+### Example: Create a Poll
 
 ```bash
 curl -X POST http://localhost:3000/api/polls \
@@ -80,14 +116,46 @@ curl -X POST http://localhost:3000/api/polls \
   }'
 ```
 
-Returns `{ "share_id": "a1b2c3d4", "admin_id": "uuid-..." }`.
+```json
+{
+  "share_id": "a1b2c3d4",
+  "admin_id": "uuid-..."
+}
+```
+
+---
+
+## Project Structure
+
+```
+index.ts                      Entry point — Bun.serve() with routes & WebSockets
+src/
+  db.ts                       SQLite schema, migrations, prepared statements
+  types.ts                    Shared TypeScript interfaces
+  server-ref.ts               Module-level server reference for WS broadcasting
+  routes/
+    polls.ts                  API route handlers (create, get, vote, admin)
+    websocket.ts              WebSocket open/close/message handlers
+frontend/
+  home.html / home.js         Poll creation page
+  poll.html / poll.js         Voting & live results page
+  admin.html / admin.js       Admin results & share link page
+  styles.css                  Shared styles
+index.test.ts                 Integration tests
+```
+
+---
 
 ## Configuration
 
-| Environment Variable | Default | Description |
-|---------------------|---------|-------------|
+| Variable | Default | Description |
+|----------|---------|-------------|
 | `PORT` | `3000` | Server port |
 | `DB_PATH` | `bun-poll.sqlite` | SQLite database file path |
+
+> Bun loads `.env` files automatically — no dotenv needed.
+
+---
 
 ## Testing
 
@@ -95,14 +163,26 @@ Returns `{ "share_id": "a1b2c3d4", "admin_id": "uuid-..." }`.
 bun test
 ```
 
-Runs integration tests covering poll creation, voting, deduplication, expiry, multi-choice validation, and page rendering.
+Covers poll creation, voting, deduplication, expiry, multi-choice validation, and page rendering.
+
+---
 
 ## Requirements
 
-- [Bun](https://bun.sh) v1.1.0 or later
+- [Bun](https://bun.sh) v1.1.0+
 
-No other runtime dependencies. The database is SQLite via `bun:sqlite`, the server is `Bun.serve()`, and the frontend is plain HTML/CSS/JS bundled by Bun's HTML imports.
+That's it. No other runtime dependencies. The database is SQLite via `bun:sqlite`, the server is `Bun.serve()`, and the frontend is plain HTML/CSS/JS bundled by Bun's HTML imports.
 
-## Licence
+---
 
-[MIT](LICENCE) — Daniel Dewhurst
+## Contributing
+
+Contributions are welcome! Feel free to open an issue or submit a pull request.
+
+---
+
+<div align="center">
+
+**[MIT Licence](LICENCE)** — Made by [Daniel Dewhurst](https://github.com/danjdewhurst)
+
+</div>
