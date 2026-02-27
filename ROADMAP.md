@@ -4,6 +4,15 @@ Ideas and planned improvements for bun-poll. Contributions welcome — pick anyt
 
 ---
 
+## Near Term
+
+### Feature Flags
+- Allow users to completely disable certain features (e.g. exports, WebSocket live updates, admin management actions)
+- Simple config object or environment variables to toggle features on/off
+- Disabled features should hide their UI elements and return appropriate API responses
+
+---
+
 ## Medium Term
 
 ### Richer Poll Types
