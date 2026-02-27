@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/danjdewhurst/bun-poll/compare/v1.2.1...v1.2.2) (2026-02-27)
+
+
+### Bug Fixes
+
+* only trust proxy headers from known proxy IPs ([015ebbe](https://github.com/danjdewhurst/bun-poll/commit/015ebbec688d0b26ff44235f7d22db05492d3a1c))
+
 ## [1.2.1](https://github.com/danjdewhurst/bun-poll/compare/v1.2.0...v1.2.1) (2026-02-27)
 
 
