@@ -64,23 +64,6 @@ Open **[http://localhost:3000](http://localhost:3000)** to create your first pol
 
 ## How It Works
 
-```
-+--------------+    POST /api/polls     +--------------+
-|              | ---------------------->|              |
-|   Browser    |    GET /api/polls/:id  |  Bun.serve() |
-|              | <--------------------- |              |
-|  (vanilla    |    POST /vote          |  WebSocket   |
-|   HTML/JS)   | ---------------------->|  broadcast   |
-|              | ws://localhost/ws/:id  |              |
-|              | < - - - - - - - - - -  |      |       |
-+--------------+ real-time vote updates +------+-------+
-                                               |
-                                        +------v-------+
-                                        |    SQLite    |
-                                        |  (WAL mode)  |
-                                        +--------------+
-```
-
 1. **Create** a poll at `/` — enter a question, add options, hit create
 2. **Share** the voting link with participants
 3. **Vote** at `/poll/:shareId` — results appear live after voting
