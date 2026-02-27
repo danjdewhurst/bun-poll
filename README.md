@@ -13,6 +13,8 @@ No frameworks. No npm bloat. Just fast, live polls with WebSocket-powered update
 [![SQLite](https://img.shields.io/badge/database-SQLite-003B57?logo=sqlite&logoColor=fff)](https://www.sqlite.org/)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](#)
 
+![bun-poll preview](preview.png)
+
 </div>
 
 ---
