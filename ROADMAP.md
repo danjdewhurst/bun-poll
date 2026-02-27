@@ -15,6 +15,10 @@ Ideas and planned improvements for bun-poll. Contributions welcome — pick anyt
 - Admin can delete a poll entirely
 - Admin can reset votes and start fresh
 
+### Code Quality
+- Set up Biome for linting and formatting
+- Add GitHub Actions workflow to run tests and checks on PRs into main
+
 ### Input Guardrails
 - Max length limits on questions and options
 - Rate limiting on the vote endpoint (per IP / per token)
