@@ -6,11 +6,6 @@ Ideas and planned improvements for bun-poll. Contributions welcome — pick anyt
 
 ## Near Term
 
-### Input Guardrails
-- Max length limits on questions and options
-- Rate limiting on the vote endpoint (per IP / per token)
-- Content-Security-Policy headers
-
 ### Live Viewer Count
 - Show "X people watching" on the poll and admin pages
 - Track connected WebSocket clients per poll
@@ -77,6 +72,11 @@ Ideas and planned improvements for bun-poll. Contributions welcome — pick anyt
 ---
 
 ## Done
+
+### Input Guardrails
+- Max length limits on questions (500 chars) and options (200 chars, max 20 options)
+- Rate limiting on the vote endpoint (10 requests per 60s per IP)
+- Content-Security-Policy headers via `<meta>` tags on all pages
 
 ### Code Quality
 - Biome for linting and formatting with `bun run lint`, `bun run format`, and `bun run check`

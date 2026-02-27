@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' ws: wss:;">
   <title>bun-poll — Create a Poll</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -22,7 +23,7 @@
         <form id="poll-form">
           <div class="form-group">
             <label for="question">Your question</label>
-            <input type="text" id="question" class="question-input" placeholder="What should we decide?" required>
+            <input type="text" id="question" class="question-input" placeholder="What should we decide?" required maxlength="500">
           </div>
 
           <div class="form-group">
@@ -30,11 +31,11 @@
             <div id="options-list">
               <div class="option-row" style="animation-delay: 0.05s">
                 <span class="option-number">1</span>
-                <input type="text" name="option" placeholder="First option" required>
+                <input type="text" name="option" placeholder="First option" required maxlength="200">
               </div>
               <div class="option-row" style="animation-delay: 0.1s">
                 <span class="option-number">2</span>
-                <input type="text" name="option" placeholder="Second option" required>
+                <input type="text" name="option" placeholder="Second option" required maxlength="200">
               </div>
             </div>
             <button type="button" id="add-option" class="btn btn-ghost mt-1">

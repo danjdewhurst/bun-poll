@@ -42,6 +42,7 @@ Most poll tools are over-engineered SaaS products or require a dozen packages ju
 | 🛡️ | **Vote deduplication** | One vote per browser, enforced client-side and at the database level |
 | 📤 | **Results export** | Download results as CSV or JSON, or copy a plain-text summary |
 | 🔧 | **Poll management** | Close voting early, reset votes, or delete polls from the admin page |
+| 🛡️ | **Input guardrails** | Length limits, rate limiting on votes, and Content-Security-Policy headers |
 | 💾 | **SQLite persistence** | WAL mode, zero external services |
 | 🪶 | **Vanilla frontend** | No build step, no framework — just HTML/CSS/JS via Bun's HTML imports |
 

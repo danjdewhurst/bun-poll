@@ -9,6 +9,10 @@ const adminLinkEl = document.getElementById("admin-link");
 const submitBtn = document.getElementById("submit-btn");
 const copyToast = document.getElementById("copy-toast");
 
+const MAX_QUESTION_LENGTH = 500;
+const MAX_OPTION_LENGTH = 200;
+const MAX_OPTIONS = 20;
+
 let optionCount = 2;
 
 function renumberOptions() {
@@ -20,13 +24,19 @@ function renumberOptions() {
 }
 
 addOptionBtn.addEventListener("click", () => {
+  const currentRows = optionsList.querySelectorAll(".option-row").length;
+  if (currentRows >= MAX_OPTIONS) {
+    errorEl.textContent = `Maximum of ${MAX_OPTIONS} options allowed.`;
+    errorEl.classList.remove("hidden");
+    return;
+  }
   optionCount++;
   const row = document.createElement("div");
   row.className = "option-row";
   row.style.animationDelay = "0s";
   row.innerHTML = `
     <span class="option-number">${optionCount}</span>
-    <input type="text" name="option" placeholder="Option ${optionCount}" required>
+    <input type="text" name="option" placeholder="Option ${optionCount}" required maxlength="${MAX_OPTION_LENGTH}">
     <button type="button" class="btn btn-remove remove-option">&times;</button>
   `;
   optionsList.appendChild(row);
@@ -64,11 +74,34 @@ form.addEventListener("submit", async (e) => {
   const expiresRaw = document.getElementById("expires").value;
   const expiresInMinutes = expiresRaw ? parseInt(expiresRaw, 10) : undefined;
 
+  if (question.length > MAX_QUESTION_LENGTH) {
+    errorEl.textContent = `Question must be ${MAX_QUESTION_LENGTH} characters or fewer.`;
+    errorEl.classList.remove("hidden");
+    submitBtn.disabled = false;
+    return;
+  }
+
   if (options.length < 2) {
     errorEl.textContent = "At least 2 options are required.";
     errorEl.classList.remove("hidden");
     submitBtn.disabled = false;
     return;
+  }
+
+  if (options.length > MAX_OPTIONS) {
+    errorEl.textContent = `Maximum of ${MAX_OPTIONS} options allowed.`;
+    errorEl.classList.remove("hidden");
+    submitBtn.disabled = false;
+    return;
+  }
+
+  for (let i = 0; i < options.length; i++) {
+    if (options[i].length > MAX_OPTION_LENGTH) {
+      errorEl.textContent = `Option ${i + 1} must be ${MAX_OPTION_LENGTH} characters or fewer.`;
+      errorEl.classList.remove("hidden");
+      submitBtn.disabled = false;
+      return;
+    }
   }
 
   try {

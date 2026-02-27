@@ -12,8 +12,13 @@ import {
   insertVote,
   resetVotesStmt,
 } from "../db.ts";
+import { checkRateLimit } from "../rate-limit.ts";
 import { getServer } from "../server-ref.ts";
 import type { CreatePollRequest, VoteRequest, WsMessage } from "../types.ts";
+
+const MAX_QUESTION_LENGTH = 500;
+const MAX_OPTION_LENGTH = 200;
+const MAX_OPTIONS = 20;
 
 function generateShareId(): string {
   const bytes = new Uint8Array(4);
@@ -36,11 +41,37 @@ function broadcastResults(pollId: number, shareId: string): void {
 
 export function createPoll(req: Request): Promise<Response> {
   return (req.json() as Promise<CreatePollRequest>).then((body) => {
-    if (!body.question?.trim()) {
+    const question = body.question?.trim() ?? "";
+
+    if (!question) {
       return Response.json({ error: "Question is required" }, { status: 400 });
+    }
+    if (question.length > MAX_QUESTION_LENGTH) {
+      return Response.json(
+        { error: `Question must be ${MAX_QUESTION_LENGTH} characters or fewer` },
+        { status: 400 },
+      );
     }
     if (!Array.isArray(body.options) || body.options.length < 2) {
       return Response.json({ error: "At least 2 options required" }, { status: 400 });
+    }
+    if (body.options.length > MAX_OPTIONS) {
+      return Response.json({ error: `Maximum of ${MAX_OPTIONS} options allowed` }, { status: 400 });
+    }
+
+    const trimmedOptions: string[] = [];
+    for (let i = 0; i < body.options.length; i++) {
+      const opt = body.options[i]?.trim() ?? "";
+      if (!opt) {
+        return Response.json({ error: `Option ${i + 1} cannot be empty` }, { status: 400 });
+      }
+      if (opt.length > MAX_OPTION_LENGTH) {
+        return Response.json(
+          { error: `Option ${i + 1} must be ${MAX_OPTION_LENGTH} characters or fewer` },
+          { status: 400 },
+        );
+      }
+      trimmedOptions.push(opt);
     }
 
     const shareId = generateShareId();
@@ -51,21 +82,14 @@ export function createPoll(req: Request): Promise<Response> {
       : null;
     const now = Date.now();
 
-    const poll = insertPoll.get(
-      shareId,
-      adminId,
-      body.question.trim(),
-      allowMultiple,
-      expiresAt,
-      now,
-    );
+    const poll = insertPoll.get(shareId, adminId, question, allowMultiple, expiresAt, now);
 
     if (!poll) {
       return Response.json({ error: "Failed to create poll" }, { status: 500 });
     }
 
-    for (let i = 0; i < body.options.length; i++) {
-      insertOption.run(poll.id, body.options[i]?.trim(), i);
+    for (let i = 0; i < trimmedOptions.length; i++) {
+      insertOption.run(poll.id, trimmedOptions[i]!, i);
     }
 
     return Response.json({
@@ -102,7 +126,27 @@ export function getPoll(req: Request): Response | Promise<Response> {
   });
 }
 
+function getClientIp(req: Request): string {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
+
 export function votePoll(req: Request): Response | Promise<Response> {
+  const clientIp = getClientIp(req);
+  const { limited, retryAfter } = checkRateLimit(clientIp);
+  if (limited) {
+    return Response.json(
+      { error: "Too many requests", retry_after: retryAfter },
+      {
+        status: 429,
+        headers: { "Retry-After": String(retryAfter) },
+      },
+    );
+  }
+
   const url = new URL(req.url);
   const parts = url.pathname.split("/");
   const shareId = parts[parts.length - 2]!;

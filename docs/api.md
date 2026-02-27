@@ -14,8 +14,8 @@ All endpoints return JSON. The server runs on `PORT` (default `3000`).
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `question` | string | Yes | The poll question (non-empty after trim) |
-| `options` | string[] | Yes | At least 2 option labels |
+| `question` | string | Yes | The poll question (non-empty after trim, max 500 characters) |
+| `options` | string[] | Yes | 2–20 option labels (each non-empty after trim, max 200 characters) |
 | `allow_multiple` | boolean | No | Allow voters to select more than one option (default `false`) |
 | `expires_in_minutes` | number | No | Minutes until voting closes (omit for no expiry) |
 
@@ -48,7 +48,7 @@ curl -X POST http://localhost:3000/api/polls \
 
 | Status | Reason |
 |---|---|
-| `400` | Empty question or fewer than 2 options |
+| `400` | Empty question, question exceeds 500 characters, fewer than 2 options, more than 20 options, empty option string, or option exceeds 200 characters |
 | `500` | Database insert failure |
 
 ---
@@ -128,6 +128,7 @@ A successful vote also triggers a WebSocket broadcast to all connected clients o
 | `404` | Poll not found |
 | `409` | Voter has already voted on this poll |
 | `410` | Poll has expired |
+| `429` | Rate limited — too many votes from this IP (max 10 per 60-second window). Response includes `retry_after` (seconds) and a `Retry-After` header |
 
 ---
 

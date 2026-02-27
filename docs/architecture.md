@@ -154,6 +154,16 @@ Each browser generates a UUID per poll (`voter_token_<shareId>` in localStorage)
 
 ---
 
+## Rate Limiting
+
+The vote endpoint is protected by an in-memory rate limiter (`src/rate-limit.ts`). Each client IP is allowed a maximum of 10 vote requests per 60-second sliding window. The implementation uses a `Map<string, { count, resetAt }>` with periodic cleanup of expired entries every 60 seconds via `setInterval`.
+
+When a client exceeds the limit, the server responds with HTTP 429 and includes a `Retry-After` header indicating how many seconds remain until the window resets. The client IP is extracted from the `X-Forwarded-For` or `X-Real-IP` headers, falling back to `"unknown"` for direct connections.
+
+This is deliberately simple — an in-memory store is sufficient for a single-process Bun server. If horizontal scaling were needed, a shared store (e.g. Redis) would replace the `Map`.
+
+---
+
 ## Configuration
 
 | Variable | Default | Description |

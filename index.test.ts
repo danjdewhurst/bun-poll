@@ -1,6 +1,7 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: test helpers use loose typing for API response assertions
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { db } from "./src/db.ts";
+import { resetRateLimitStore } from "./src/rate-limit.ts";
 
 const PORT = 0; // Let OS pick a free port
 let baseUrl: string;
@@ -440,6 +441,68 @@ describe("POST /api/polls/admin/:adminId/reset", () => {
       method: "POST",
     });
     expect(res.status).toBe(404);
+  });
+});
+
+describe("Input guardrails", () => {
+  test("rejects question exceeding max length", async () => {
+    const longQuestion = "x".repeat(501);
+    const { res, data } = await createTestPoll({ question: longQuestion });
+    expect(res.status).toBe(400);
+    expect(data.error).toContain("500 characters");
+  });
+
+  test("rejects option exceeding max length", async () => {
+    const longOption = "y".repeat(201);
+    const { res, data } = await createTestPoll({ options: ["Valid", longOption] });
+    expect(res.status).toBe(400);
+    expect(data.error).toContain("200 characters");
+  });
+
+  test("rejects too many options", async () => {
+    const options = Array.from({ length: 21 }, (_, i) => `Option ${i + 1}`);
+    const { res, data } = await createTestPoll({ options });
+    expect(res.status).toBe(400);
+    expect(data.error).toContain("20");
+  });
+
+  test("rejects empty option string", async () => {
+    const { res, data } = await createTestPoll({ options: ["Valid", "  "] });
+    expect(res.status).toBe(400);
+    expect(data.error).toContain("cannot be empty");
+  });
+
+  test("rate limiting returns 429 after too many votes", async () => {
+    resetRateLimitStore();
+
+    const { data: created } = await createTestPoll();
+    const pollRes = await fetch(`${baseUrl}/api/polls/${created.share_id}`);
+    const pollData = (await pollRes.json()) as any;
+    const optionId = pollData.options[0].id;
+
+    // Send 11 vote requests (limit is 10 per window)
+    const results: Response[] = [];
+    for (let i = 0; i < 11; i++) {
+      const res = await fetch(`${baseUrl}/api/polls/${created.share_id}/vote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          option_ids: [optionId],
+          voter_token: crypto.randomUUID(),
+        }),
+      });
+      results.push(res);
+    }
+
+    const lastRes = results[results.length - 1]!;
+    expect(lastRes.status).toBe(429);
+    expect(lastRes.headers.get("Retry-After")).toBeDefined();
+    const body = (await lastRes.json()) as any;
+    expect(body.error).toBe("Too many requests");
+    expect(body.retry_after).toBeNumber();
+
+    // Clean up for other tests
+    resetRateLimitStore();
   });
 });
 
