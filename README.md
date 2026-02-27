@@ -73,7 +73,7 @@ Open **[http://localhost:3000](http://localhost:3000)** to create your first pol
 |   HTML/JS)   | ---------------------->|  broadcast   |
 |              | ws://localhost/ws/:id  |              |
 |              | < - - - - - - - - - -  |      |       |
-+--------------+  real-time vote updates+------+-------+
++--------------+ real-time vote updates +------+-------+
                                                |
                                         +------v-------+
                                         |    SQLite    |
