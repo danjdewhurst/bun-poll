@@ -2,6 +2,7 @@ import home from "./frontend/home.html";
 import poll from "./frontend/poll.html";
 import admin from "./frontend/admin.html";
 import { createPoll, getPoll, votePoll, getAdminPoll } from "./src/routes/polls.ts";
+import { healthCheck } from "./src/routes/health.ts";
 import { websocketHandlers } from "./src/routes/websocket.ts";
 import { setServer } from "./src/server-ref.ts";
 
@@ -13,6 +14,7 @@ const server = Bun.serve({
     "/": home,
     "/poll/:shareId": poll,
     "/admin/:adminId": admin,
+    "/health": { GET: healthCheck },
     "/api/polls": {
       POST: createPoll,
     },

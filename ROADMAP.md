@@ -24,10 +24,6 @@ Ideas and planned improvements for bun-poll. Contributions welcome — pick anyt
 - Show "X people watching" on the poll and admin pages
 - Track connected WebSocket clients per poll
 
-### Health Check
-- `GET /health` endpoint returning uptime, poll count, and database status
-- Useful for monitoring and load balancer probes
-
 ---
 
 ## Medium Term
@@ -85,7 +81,16 @@ Ideas and planned improvements for bun-poll. Contributions welcome — pick anyt
 ### Deployment Options
 - Dockerfile and docker-compose example
 - One-click deploy buttons (Railway, Fly.io, Render)
-- `GET /health` with structured JSON for orchestration
+- ~~`GET /health` with structured JSON for orchestration~~ ✓ (see Done)
+
+---
+
+## Done
+
+### Health Check
+- `GET /health` endpoint returning uptime, poll count, and database status
+- Returns `"degraded"` with HTTP 503 when the database is unreachable
+- Useful for monitoring and load balancer probes
 
 ---
 

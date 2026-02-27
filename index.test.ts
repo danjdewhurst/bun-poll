@@ -15,6 +15,7 @@ beforeAll(async () => {
 
   // Dynamically import and start the server
   const { createPoll, getPoll, votePoll, getAdminPoll } = await import("./src/routes/polls.ts");
+  const { healthCheck } = await import("./src/routes/health.ts");
   const { websocketHandlers } = await import("./src/routes/websocket.ts");
   const { setServer } = await import("./src/server-ref.ts");
   const home = (await import("./frontend/home.html")).default;
@@ -27,6 +28,7 @@ beforeAll(async () => {
       "/": home,
       "/poll/:shareId": poll,
       "/admin/:adminId": admin,
+      "/health": { GET: healthCheck },
       "/api/polls": { POST: createPoll },
       "/api/polls/:shareId": { GET: getPoll },
       "/api/polls/:shareId/vote": { POST: votePoll },
@@ -253,6 +255,26 @@ describe("GET /api/polls/admin/:adminId", () => {
   test("returns 404 for unknown admin_id", async () => {
     const res = await fetch(`${baseUrl}/api/polls/admin/nonexist`);
     expect(res.status).toBe(404);
+  });
+});
+
+describe("GET /health", () => {
+  test("returns 200 with expected shape", async () => {
+    const res = await fetch(`${baseUrl}/health`);
+    const data = await res.json() as any;
+    expect(res.status).toBe(200);
+    expect(data.status).toBe("ok");
+    expect(typeof data.uptime_seconds).toBe("number");
+    expect(data.uptime_seconds).toBeGreaterThanOrEqual(0);
+    expect(typeof data.polls).toBe("number");
+    expect(data.database).toBe("ok");
+  });
+
+  test("polls count reflects created polls", async () => {
+    const before = await fetch(`${baseUrl}/health`).then(r => r.json()) as any;
+    await createTestPoll();
+    const after = await fetch(`${baseUrl}/health`).then(r => r.json()) as any;
+    expect(after.polls).toBe(before.polls + 1);
   });
 });
 

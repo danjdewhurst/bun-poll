@@ -110,4 +110,8 @@ export const getOptionIdsByPollId = db.prepare<{ id: number }, [number]>(
   `SELECT id FROM options WHERE poll_id = ?`
 );
 
+export const getPollCount = db.prepare<{ count: number }, []>(
+  `SELECT COUNT(*) AS count FROM polls`
+);
+
 export { db };
