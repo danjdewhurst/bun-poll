@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vote — bun-poll</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="page">
+    <div class="container">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="3" height="10" rx="1.5" fill="#0c0b0a"/><rect x="6.5" y="5" width="3" height="8" rx="1.5" fill="#0c0b0a"/><rect x="11" y="1" width="3" height="12" rx="1.5" fill="#0c0b0a"/></svg>
+        </div>
+        <span class="brand-name">bun-poll</span>
+      </div>
+
+      <div id="loading" class="loading-card">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading poll&hellip;</div>
+      </div>
+
+      <div id="poll-view" class="hidden">
+        <h1 id="question"></h1>
+
+        <div id="vote-section" class="card" style="animation-delay: 0.2s">
+          <div class="section-label" id="vote-hint">Choose one</div>
+          <form id="vote-form">
+            <div id="vote-options"></div>
+            <button type="submit" class="btn btn-primary mt-2" id="vote-btn" style="width: 100%">
+              Cast Vote
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7h12M8 2l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div id="error" class="error hidden"></div>
+          </form>
+        </div>
+
+        <div id="results-section" class="card hidden" style="animation-delay: 0.15s">
+          <div class="section-label">Results</div>
+          <div id="results"></div>
+          <div class="status-bar">
+            <span class="vote-count" id="total-votes"></span>
+            <span class="live-indicator" id="ws-status">
+              <span class="live-dot" id="ws-dot"></span>
+              <span id="ws-text">Connecting&hellip;</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="./poll.js"></script>
+</body>
+</html>
