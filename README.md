@@ -65,20 +65,20 @@ Open **[http://localhost:3000](http://localhost:3000)** to create your first pol
 ## How It Works
 
 ```
-┌─────────────┐       POST /api/polls        ┌──────────────┐
-│             │ ─────────────────────────────▸ │              │
-│   Browser   │       GET  /api/polls/:id     │  Bun.serve() │
-│             │ ◂───────────────────────────── │              │
-│  (vanilla   │       POST /vote              │  WebSocket   │
-│   HTML/JS)  │ ─────────────────────────────▸ │  broadcast   │
-│             │       ws://localhost/ws/:id    │              │
-│             │ ◂ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  │      │       │
-└─────────────┘   real-time vote updates      └──────┼───────┘
-                                                     │
-                                              ┌──────▾───────┐
-                                              │   SQLite      │
-                                              │   (WAL mode)  │
-                                              └──────────────┘
+┌──────────────┐     POST /api/polls      ┌──────────────┐
+│              │ ────────────────────────> │              │
+│   Browser    │     GET /api/polls/:id   │  Bun.serve() │
+│              │ <─────────────────────── │              │
+│  (vanilla    │     POST /vote           │  WebSocket   │
+│   HTML/JS)   │ ────────────────────────> │  broadcast   │
+│              │     ws://localhost/ws/:id │              │
+│              │ < - - - - - - - - - - -  │      │       │
+└──────────────┘  real-time vote updates  └──────┼───────┘
+                                                 │
+                                          ┌──────▼───────┐
+                                          │    SQLite     │
+                                          │  (WAL mode)   │
+                                          └──────────────┘
 ```
 
 1. **Create** a poll at `/` — enter a question, add options, hit create
@@ -175,9 +175,13 @@ That's it. No other runtime dependencies. The database is SQLite via `bun:sqlite
 
 ---
 
+## Roadmap
+
+See **[ROADMAP.md](ROADMAP.md)** for planned features and ideas — contributions welcome!
+
 ## Contributing
 
-Contributions are welcome! Feel free to open an issue or submit a pull request.
+Feel free to open an issue or submit a pull request.
 
 ---
 
